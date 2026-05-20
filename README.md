@@ -166,7 +166,7 @@ Paleta de cores inspirada no tema premium **Eclipse**:
 
 ## 👨‍💻 Autor
 
-Desenvolvido como TCC — Curso de Tecnologia da Informação  
+Desenvolvido como TCC — Curso de Ciência da Computação 
 Brasília, 2026
 
 ---
