@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Meus Agendamentos — Barbearia Eclipse{% endblock %}
+{% block body %}
+<header class="bg-background/95 fixed top-0 w-full z-50 border-b border-outline-variant/20 backdrop-blur-md">
+  <div class="flex justify-between items-center px-margin-mobile md:px-margin-desktop h-20 max-w-container-max mx-auto">
+    <a href="{{ url_for('index') }}" class="font-display text-primary tracking-tighter uppercase text-[24px] font-bold hover:opacity-80">ECLIPSE</a>
+    <div class="flex items-center gap-4">
+      {% if session.is_admin %}
+        <a href="{{ url_for('admin_dashboard') }}" class="bg-primary text-on-primary px-5 py-2 font-body text-[13px] uppercase tracking-widest font-bold hover:bg-primary-container transition-all active:scale-95">Painel Admin</a>
+      {% endif %}
+      <a href="{{ url_for('agendar') }}" class="bg-primary text-on-primary px-5 py-2 font-body text-[13px] uppercase tracking-widest font-bold hover:bg-primary-container transition-all active:scale-95">+ NOVO</a>
+      <a href="{{ url_for('logout') }}" class="border border-outline-variant text-on-surface-variant px-4 py-2 font-body text-[13px] uppercase tracking-widest hover:border-primary hover:text-primary transition-all">Sair</a>
+    </div>
+  </div>
+</header>
+
+<main class="pt-28 pb-24 min-h-screen bg-background">
+  <div class="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+    <div class="mb-12">
+      <span class="text-primary font-body text-[14px] uppercase tracking-[0.3em] block mb-4">Área do Cliente</span>
+      <h1 class="font-display text-[40px] text-on-background font-bold">Meus Agendamentos</h1>
+      <p class="text-on-surface-variant font-body mt-2">Olá, {{ session.user_nome.split()[0] }}! Aqui estão todos os seus agendamentos.</p>
+    </div>
+
+    {% if agendamentos %}
+    <div class="space-y-4">
+      {% for a in agendamentos %}
+      <div class="bg-surface-container-low border border-outline-variant/20 p-6 hover:border-primary/30 transition-all
+        {% if a.status == 'cancelado' %}opacity-50{% endif %}">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="flex items-start gap-6">
+            <div class="w-14 h-14 bg-surface-container flex items-center justify-center border border-outline-variant/20 shrink-0">
+              <span class="material-symbols-outlined text-primary text-[28px]">content_cut</span>
+            </div>
+            <div>
+              <h3 class="font-display text-[20px] text-on-background font-semibold">{{ a.servico_nome }}</h3>
+              <div class="flex flex-wrap gap-x-6 gap-y-1 mt-1">
+                <span class="font-body text-[14px] text-on-surface-variant flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[16px]">person</span> {{ a.barbeiro_nome }}
+                </span>
+                <span class="font-body text-[14px] text-on-surface-variant flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[16px]">calendar_today</span>
+                  {{ a.data_hora[:10] }} às {{ a.data_hora[11:16] }}
+                </span>
+                <span class="font-body text-[14px] text-on-surface-variant flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[16px]">schedule</span> {{ a.duracao }} min
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-4 shrink-0">
+            <div class="text-right">
+              <p class="font-body text-primary text-[22px] font-bold">R$ {{ "%.0f"|format(a.preco) }},00</p>
+              <span class="inline-block px-3 py-1 font-body text-[11px] uppercase tracking-widest font-bold
+                {% if a.status == 'confirmado' %}bg-primary/10 text-primary border border-primary/30
+                {% elif a.status == 'concluido' %}bg-green-500/10 text-green-400 border border-green-500/30
+                {% else %}bg-error/10 text-error border border-error/30{% endif %}">
+                {{ a.status }}
+              </span>
+            </div>
+            {% if a.status == 'confirmado' %}
+            <a href="{{ url_for('cancelar_agendamento', id=a.id) }}"
+               onclick="return confirm('Deseja cancelar este agendamento?')"
+               class="border border-error/30 text-error px-4 py-2 font-body text-[13px] uppercase tracking-widest hover:bg-error/10 transition-colors">
+              Cancelar
+            </a>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if a.data_hora < agora and a.status != 'cancelado' %}
+          {% if a.id in avaliados_map %}
+          <div class="mt-4 pt-4 border-t border-outline-variant/10 flex items-center gap-2">
+            <span class="text-[12px] text-on-surface-variant font-body uppercase tracking-widest">Sua avaliacao:</span>
+            {% for i in range(avaliados_map[a.id]) %}
+            <span class="material-symbols-outlined text-primary fill-icon text-[18px]">star</span>
+            {% endfor %}
+            {% for i in range(5 - avaliados_map[a.id]) %}
+            <span class="material-symbols-outlined text-outline text-[18px]">star</span>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="mt-4 pt-4 border-t border-outline-variant/10">
+            <p class="text-[12px] text-on-surface-variant font-body uppercase tracking-widest mb-3">Como foi o atendimento?</p>
+            <form method="POST" action="{{ url_for('avaliar', agendamento_id=a.id) }}" onsubmit="return validarNota(this)">
+              <div class="flex items-center gap-1 mb-3" id="stars-{{ a.id }}">
+                {% for i in [1,2,3,4,5] %}
+                <button type="button"
+                        onclick="selecionarEstrela({{ a.id }}, {{ i }})"
+                        class="material-symbols-outlined text-[28px] text-outline hover:text-primary transition-colors cursor-pointer">star</button>
+                {% endfor %}
+                <input type="hidden" name="nota" id="nota-{{ a.id }}" value="0">
+              </div>
+              <input type="text" name="comentario" placeholder="Comentario opcional..."
+                     class="w-full bg-surface-container border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-2 px-0 text-sm font-body mb-3 placeholder:text-outline-variant"/>
+              <button type="submit"
+                      class="bg-surface-container-high border border-outline-variant/30 text-on-surface-variant px-5 py-2 font-body text-[12px] uppercase tracking-widest hover:border-primary hover:text-primary transition-all">
+                Enviar Avaliacao
+              </button>
+            </form>
+          </div>
+          {% endif %}
+        {% endif %}
+
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-24">
+      <span class="material-symbols-outlined text-primary/20 text-[100px]">calendar_month</span>
+      <h3 class="font-display text-[28px] text-on-surface-variant mt-6 mb-4">Nenhum agendamento ainda</h3>
+      <p class="font-body text-on-surface-variant mb-8">Reserve agora e experiencie o melhor da barbearia.</p>
+      <a href="{{ url_for('agendar') }}" class="bg-primary text-on-primary px-10 py-4 font-body uppercase tracking-widest font-bold hover:bg-primary-container transition-all">
+        AGENDAR AGORA
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</main>
+{% endblock %}
+{% block scripts %}
+<script>
+function selecionarEstrela(agendId, valor) {
+  document.getElementById('nota-' + agendId).value = valor;
+  const container = document.getElementById('stars-' + agendId);
+  const btns = container.querySelectorAll('button');
+  btns.forEach(function(btn, i) {
+    if (i < valor) {
+      btn.classList.add('fill-icon', 'text-primary');
+      btn.classList.remove('text-outline');
+    } else {
+      btn.classList.remove('fill-icon', 'text-primary');
+      btn.classList.add('text-outline');
+    }
+  });
+}
+function validarNota(form) {
+  const nota = form.querySelector('input[name="nota"]').value;
+  if (!nota || nota === '0') {
+    alert('Selecione uma nota de 1 a 5 estrelas.');
+    return false;
+  }
+  return true;
+}
+</script>
+{% endblock %}

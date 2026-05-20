@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Agendar — Barbearia Eclipse{% endblock %}
+{% block body %}
+<!-- HEADER -->
+<header class="bg-background/95 fixed top-0 w-full z-50 border-b border-outline-variant/20 backdrop-blur-md">
+  <div class="flex justify-between items-center px-margin-mobile md:px-margin-desktop h-20 max-w-container-max mx-auto">
+    <a href="{{ url_for('index') }}" class="font-display text-primary tracking-tighter uppercase text-[24px] md:text-[28px] font-bold hover:opacity-80 transition-opacity">ECLIPSE</a>
+    <nav class="hidden md:flex items-center gap-8">
+      <a href="{{ url_for('index') }}" class="text-on-surface-variant font-body text-[14px] uppercase tracking-widest hover:text-primary transition-colors">Início</a>
+      <a href="{{ url_for('index') }}#servicos" class="text-on-surface-variant font-body text-[14px] uppercase tracking-widest hover:text-primary transition-colors">Serviços</a>
+      <a href="{{ url_for('meus_agendamentos') }}" class="text-on-surface-variant font-body text-[14px] uppercase tracking-widest hover:text-primary transition-colors">Meus Agendamentos</a>
+    </nav>
+    <div class="flex items-center gap-3">
+      <span class="text-on-surface-variant font-body text-sm hidden md:block">{{ session.user_nome }}</span>
+      {% if session.is_admin %}
+        <a href="{{ url_for('admin_dashboard') }}" class="bg-primary text-on-primary px-4 py-2 font-body text-[13px] uppercase tracking-widest font-bold hover:bg-primary-container transition-all hidden md:block">Painel Admin</a>
+      {% endif %}
+      <a href="{{ url_for('logout') }}" class="border border-outline-variant text-on-surface-variant px-4 py-2 font-body text-[13px] uppercase tracking-widest hover:border-primary hover:text-primary transition-all">Sair</a>
+    </div>
+  </div>
+</header>
+
+<main class="pt-28 pb-24 min-h-screen bg-background">
+  <div class="max-w-2xl mx-auto px-margin-mobile md:px-0">
+    <div class="mb-12">
+      <span class="text-primary font-body text-[14px] uppercase tracking-[0.3em] block mb-4">Reserve sua hora</span>
+      <h1 class="font-display text-[40px] text-on-background font-bold">Agendar Serviço</h1>
+    </div>
+
+    <div class="bg-surface-container-low border border-outline-variant/20 p-8 md:p-10">
+      <form method="POST" class="space-y-8">
+
+        <!-- SERVIÇO -->
+        <div>
+          <label class="block font-body text-[14px] text-on-surface-variant uppercase tracking-widest mb-4">1. Escolha o Serviço *</label>
+          <div class="space-y-3">
+            {% for s in servicos %}
+            <label class="flex items-center justify-between p-4 border border-outline-variant/20 cursor-pointer hover:border-primary/50 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5 group">
+              <div class="flex items-center gap-4">
+                <input type="radio" name="servico_id" value="{{ s.id }}" class="accent-[#f2ca50] w-4 h-4" required/>
+                <div>
+                  <p class="font-body text-[16px] text-on-background font-semibold group-[:has(:checked)]:text-primary">{{ s.nome }}</p>
+                  <p class="font-body text-[13px] text-on-surface-variant">{{ s.categoria }} • {{ s.duracao }} min</p>
+                </div>
+              </div>
+              <span class="font-body text-primary font-bold text-[18px]">R$ {{ "%.0f"|format(s.preco) }},00</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- BARBEIRO -->
+        <div>
+          <label class="block font-body text-[14px] text-on-surface-variant uppercase tracking-widest mb-4">2. Escolha o Profissional *</label>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {% for b in barbeiros %}
+            <label class="flex flex-col items-center p-5 border border-outline-variant/20 cursor-pointer hover:border-primary/50 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5 text-center">
+              <input type="radio" name="barbeiro_id" value="{{ b.id }}" class="accent-[#f2ca50] mb-3" required/>
+              <div class="w-12 h-12 rounded-full bg-outline-variant/20 flex items-center justify-center mb-2">
+                <span class="font-display text-primary text-[20px]">{{ b.nome[0] }}</span>
+              </div>
+              <p class="font-body text-[15px] text-on-background font-semibold">{{ b.nome.split()[0] }}</p>
+              <p class="font-body text-[12px] text-primary uppercase tracking-widest">{{ b.nivel }}</p>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- DATA E HORA -->
+        <div>
+          <label class="block font-body text-[14px] text-on-surface-variant uppercase tracking-widest mb-2">3. Data e Horário *</label>
+          <input type="datetime-local" name="data_hora" required
+            class="w-full bg-surface-container border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-3 px-0 transition-colors font-body [color-scheme:dark]"/>
+        </div>
+
+        <!-- OBSERVAÇÕES -->
+        <div>
+          <label class="block font-body text-[14px] text-on-surface-variant uppercase tracking-widest mb-2">4. Observações (opcional)</label>
+          <textarea name="observacoes" rows="3" placeholder="Ex: Prefiro fade alto, trazer referência..."
+            class="w-full bg-surface-container border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-3 px-0 transition-colors resize-none placeholder:text-outline-variant font-body"></textarea>
+        </div>
+
+        <div class="pt-4 flex flex-col sm:flex-row gap-4">
+          <button type="submit" class="flex-1 bg-primary text-on-primary py-4 font-body tracking-widest uppercase font-bold hover:bg-primary-container transition-all active:scale-95">
+            CONFIRMAR AGENDAMENTO
+          </button>
+          <a href="{{ url_for('index') }}" class="flex-1 border border-outline-variant text-on-surface-variant py-4 font-body tracking-widest uppercase text-center hover:border-primary hover:text-primary transition-all">
+            CANCELAR
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</main>
+{% endblock %}

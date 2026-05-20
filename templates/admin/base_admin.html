@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="flex min-h-screen bg-background">
+
+  <!-- SIDEBAR -->
+  <aside class="fixed left-0 top-0 h-full flex flex-col bg-surface-container-low w-64 border-r border-outline-variant z-50">
+    <div class="p-8">
+      <h1 class="font-display text-[24px] font-bold text-primary tracking-widest uppercase">ECLIPSE</h1>
+      <p class="font-body text-[14px] text-on-surface-variant opacity-70 mt-1">Painel Admin</p>
+    </div>
+    <nav class="flex-1 px-4 space-y-1">
+      <a href="{{ url_for('admin_dashboard') }}"
+         class="flex items-center gap-3 px-4 py-3 font-body font-medium transition-all rounded
+         {% if request.endpoint == 'admin_dashboard' %}text-primary font-bold border-l-4 border-primary bg-surface-container-high{% else %}text-on-surface-variant hover:text-on-surface hover:bg-surface-variant{% endif %}">
+        <span class="material-symbols-outlined {% if request.endpoint == 'admin_dashboard' %}fill-icon{% endif %}">dashboard</span>
+        <span class="text-[14px] tracking-wider uppercase">Dashboard</span>
+      </a>
+      <a href="{{ url_for('admin_agendamentos') }}"
+         class="flex items-center gap-3 px-4 py-3 font-body font-medium transition-all rounded
+         {% if request.endpoint == 'admin_agendamentos' %}text-primary font-bold border-l-4 border-primary bg-surface-container-high{% else %}text-on-surface-variant hover:text-on-surface hover:bg-surface-variant{% endif %}">
+        <span class="material-symbols-outlined {% if request.endpoint == 'admin_agendamentos' %}fill-icon{% endif %}">calendar_month</span>
+        <span class="text-[14px] tracking-wider uppercase">Agendamentos</span>
+      </a>
+      <a href="{{ url_for('admin_servicos') }}"
+         class="flex items-center gap-3 px-4 py-3 font-body font-medium transition-all rounded
+         {% if request.endpoint in ['admin_servicos','admin_servico_novo','admin_servico_editar'] %}text-primary font-bold border-l-4 border-primary bg-surface-container-high{% else %}text-on-surface-variant hover:text-on-surface hover:bg-surface-variant{% endif %}">
+        <span class="material-symbols-outlined {% if 'servico' in request.endpoint %}fill-icon{% endif %}">format_list_bulleted</span>
+        <span class="text-[14px] tracking-wider uppercase">Serviços</span>
+      </a>
+      <a href="{{ url_for('admin_barbeiros') }}"
+         class="flex items-center gap-3 px-4 py-3 font-body font-medium transition-all rounded
+         {% if 'barbeiro' in request.endpoint %}text-primary font-bold border-l-4 border-primary bg-surface-container-high{% else %}text-on-surface-variant hover:text-on-surface hover:bg-surface-variant{% endif %}">
+        <span class="material-symbols-outlined {% if 'barbeiro' in request.endpoint %}fill-icon{% endif %}">content_cut</span>
+        <span class="text-[14px] tracking-wider uppercase">Barbeiros</span>
+      </a>
+      <a href="{{ url_for('admin_graficos') }}"
+         class="flex items-center gap-3 px-4 py-3 font-body font-medium transition-all rounded
+         {% if request.endpoint == 'admin_graficos' %}text-primary font-bold border-l-4 border-primary bg-surface-container-high{% else %}text-on-surface-variant hover:text-on-surface hover:bg-surface-variant{% endif %}">
+        <span class="material-symbols-outlined {% if request.endpoint == 'admin_graficos' %}fill-icon{% endif %}">bar_chart</span>
+        <span class="text-[14px] tracking-wider uppercase">Gráficos</span>
+      </a>
+      <a href="{{ url_for('admin_calendario') }}"
+         class="flex items-center gap-3 px-4 py-3 font-body font-medium transition-all rounded
+         {% if request.endpoint == 'admin_calendario' %}text-primary font-bold border-l-4 border-primary bg-surface-container-high{% else %}text-on-surface-variant hover:text-on-surface hover:bg-surface-variant{% endif %}">
+        <span class="material-symbols-outlined {% if request.endpoint == 'admin_calendario' %}fill-icon{% endif %}">calendar_month</span>
+        <span class="text-[14px] tracking-wider uppercase">Calendário</span>
+      </a>
+    </nav>
+    <div class="p-4 border-t border-outline-variant/20">
+      <a href="{{ url_for('index') }}" class="flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors px-4 py-2">
+        <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+        <span class="font-body text-[13px] uppercase tracking-widest">Ver Site</span>
+      </a>
+      <a href="{{ url_for('logout') }}" class="flex items-center gap-2 text-on-surface-variant hover:text-error transition-colors px-4 py-2 mt-1">
+        <span class="material-symbols-outlined text-[18px]">logout</span>
+        <span class="font-body text-[13px] uppercase tracking-widest">Sair</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="ml-64 flex-1 flex flex-col">
+    <!-- TOPBAR -->
+    <header class="flex justify-between items-center h-16 w-full px-margin-desktop bg-surface-container border-b border-outline-variant fixed top-0 left-64 right-0 z-40">
+      <h2 class="font-display text-[20px] font-bold text-primary">{% block admin_title %}Eclipse Admin{% endblock %}</h2>
+      <div class="flex items-center gap-6">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary fill-icon">account_circle</span>
+          <span class="font-body text-[14px] text-on-surface uppercase tracking-wider">{{ session.user_nome.split()[0] }}</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="mt-16 flex-1 p-8">
+      {% block admin_content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endblock %}

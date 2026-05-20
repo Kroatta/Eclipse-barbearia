@@ -1,0 +1,109 @@
+{% extends "admin/base_admin.html" %}
+{% block admin_title %}Dashboard{% endblock %}
+
+{% block admin_content %}
+<div class="mb-8">
+  <span class="text-primary font-body text-[12px] uppercase tracking-[0.3em] block mb-2">Administração</span>
+  <h1 class="font-display text-[32px] text-on-background font-semibold">Dashboard</h1>
+</div>
+
+<!-- KPI CARDS -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10">
+  <div class="bg-surface-container border border-outline-variant/20 p-6 flex flex-col justify-between h-36 hover:border-primary/30 transition-all">
+    <div class="flex items-start justify-between">
+      <span class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest">Total Agendamentos</span>
+      <span class="material-symbols-outlined text-primary/40 text-[28px]">calendar_month</span>
+    </div>
+    <span class="font-display text-[36px] text-primary font-bold">{{ total_agendamentos }}</span>
+  </div>
+  <div class="bg-surface-container border border-outline-variant/20 p-6 flex flex-col justify-between h-36 hover:border-primary/30 transition-all">
+    <div class="flex items-start justify-between">
+      <span class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest">Clientes</span>
+      <span class="material-symbols-outlined text-primary/40 text-[28px]">group</span>
+    </div>
+    <span class="font-display text-[36px] text-primary font-bold">{{ total_clientes }}</span>
+  </div>
+  <div class="bg-surface-container border border-outline-variant/20 p-6 flex flex-col justify-between h-36 hover:border-primary/30 transition-all">
+    <div class="flex items-start justify-between">
+      <span class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest">Barbeiros</span>
+      <span class="material-symbols-outlined text-primary/40 text-[28px]">content_cut</span>
+    </div>
+    <span class="font-display text-[36px] text-primary font-bold">{{ total_barbeiros }}</span>
+  </div>
+  <div class="bg-surface-container-high border-2 border-primary p-6 flex flex-col justify-between h-36">
+    <span class="font-body text-[12px] text-primary uppercase tracking-widest font-bold">Receita Total</span>
+    <span class="font-display text-[26px] text-on-background font-bold">R$ {{ "%.0f"|format(receita) }}</span>
+  </div>
+</div>
+
+<!-- MINI CHART + RECENT -->
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+  <!-- MINI CHART -->
+  <div class="bg-surface-container-low border border-outline-variant/20 p-6">
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="font-body text-[14px] text-on-background uppercase tracking-widest font-semibold">Serviços Populares</h3>
+      <a href="{{ url_for('admin_graficos') }}" class="text-primary font-body text-[13px] hover:underline">Ver tudo →</a>
+    </div>
+    <canvas id="miniChart" height="200"></canvas>
+  </div>
+
+  <!-- RECENT APPOINTMENTS -->
+  <div class="xl:col-span-2 bg-surface-container-low border border-outline-variant/20 p-6">
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="font-body text-[14px] text-on-background uppercase tracking-widest font-semibold">Agendamentos Recentes</h3>
+      <a href="{{ url_for('admin_agendamentos') }}" class="text-primary font-body text-[13px] hover:underline">Ver todos →</a>
+    </div>
+    <div class="space-y-3">
+      {% for a in agendamentos_recentes %}
+      <div class="flex items-center justify-between py-3 border-b border-outline-variant/10">
+        <div class="flex items-center gap-4">
+          <div class="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center">
+            <span class="font-display text-primary text-[14px]">{{ a.usuario_nome[0] }}</span>
+          </div>
+          <div>
+            <p class="font-body text-[14px] text-on-background font-semibold">{{ a.usuario_nome.split()[:2]|join(' ') }}</p>
+            <p class="font-body text-[12px] text-on-surface-variant">{{ a.servico_nome }} • {{ a.barbeiro_nome.split()[0] }}</p>
+          </div>
+        </div>
+        <div class="text-right">
+          <p class="font-body text-[13px] text-primary font-bold">R$ {{ "%.0f"|format(a.preco) }}</p>
+          <span class="font-body text-[11px] uppercase px-2 py-0.5
+            {% if a.status == 'confirmado' %}text-primary bg-primary/10
+            {% elif a.status == 'concluido' %}text-green-400 bg-green-500/10
+            {% else %}text-error bg-error/10{% endif %}">
+            {{ a.status }}
+          </span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+fetch('/api/graficos/servicos-populares')
+  .then(r => r.json())
+  .then(data => {
+    const ctx = document.getElementById('miniChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: data.map(d => d.nome),
+        datasets: [{
+          data: data.map(d => d.total),
+          backgroundColor: ['#f2ca50','#d4af37','#e9c349','#b8963e','#ffd980','#a07830'],
+          borderColor: '#201f1f',
+          borderWidth: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#d0c5af', font: { family: 'Hanken Grotesk', size: 12 }, padding: 16 } }
+        }
+      }
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,166 @@
+{% extends "admin/base_admin.html" %}
+{% block admin_title %}Gerenciar Serviços{% endblock %}
+
+{% block admin_content %}
+<div class="flex items-end justify-between mb-8">
+  <div>
+    <span class="text-primary font-body text-[12px] uppercase tracking-[0.3em] block mb-2">Administração</span>
+    <h1 class="font-display text-[32px] text-on-background font-semibold">Gerenciar Serviços</h1>
+    <p class="text-on-surface-variant font-body mt-1 max-w-md">Controle o catálogo de serviços da Barbearia Eclipse.</p>
+  </div>
+  <button onclick="document.getElementById('modal-novo').classList.remove('hidden')"
+    class="bg-primary text-on-primary font-body text-[14px] px-8 py-3 flex items-center gap-2 uppercase tracking-widest font-bold hover:bg-primary-container transition-all active:scale-95">
+    <span class="material-symbols-outlined">add_circle</span> NOVO SERVIÇO
+  </button>
+</div>
+
+<div class="flex gap-6">
+  <!-- GRID SERVIÇOS -->
+  <div class="flex-1 grid grid-cols-1 xl:grid-cols-2 gap-5">
+    {% for s in servicos %}
+    <div class="bg-surface-container-low p-6 border border-outline-variant/20 group hover:border-primary/40 transition-all">
+      <div class="flex justify-between items-start mb-4">
+        <div>
+          <span class="text-primary font-body text-[12px] uppercase tracking-widest block mb-1">{{ s.categoria }}</span>
+          <h3 class="font-display text-[22px] text-on-background font-semibold">{{ s.nome }}</h3>
+        </div>
+        <div class="text-right">
+          <p class="text-primary font-display text-[22px] font-bold">R$ {{ "%.0f"|format(s.preco) }},00</p>
+          <span class="text-on-surface-variant font-body text-[13px] flex items-center justify-end gap-1">
+            <span class="material-symbols-outlined text-[14px]">schedule</span> {{ s.duracao }} min
+          </span>
+        </div>
+      </div>
+      <p class="text-on-surface-variant font-body text-[14px] mb-6 line-clamp-2">{{ s.descricao }}</p>
+      <div class="flex gap-3">
+        <button onclick="openEdit({{ s.id }}, '{{ s.nome }}', '{{ s.descricao }}', {{ s.preco }}, {{ s.duracao }}, '{{ s.categoria }}')"
+          class="flex-1 border border-outline-variant text-on-surface py-2 font-body text-[13px] uppercase tracking-wider hover:bg-surface-variant transition-colors flex items-center justify-center gap-2">
+          <span class="material-symbols-outlined text-[16px]">edit</span> EDITAR
+        </button>
+        <a href="{{ url_for('admin_servico_excluir', id=s.id) }}"
+           onclick="return confirm('Remover {{ s.nome }}?')"
+           class="flex-1 border border-error/20 text-error py-2 font-body text-[13px] uppercase tracking-wider hover:bg-error/10 transition-colors flex items-center justify-center gap-2">
+          <span class="material-symbols-outlined text-[16px]">delete</span> EXCLUIR
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- MODAL NOVO -->
+<div id="modal-novo" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+  <div class="bg-surface-container-high w-full max-w-lg border border-outline-variant/30 p-8 shadow-2xl">
+    <div class="flex justify-between items-center mb-8">
+      <h4 class="font-display text-[24px] text-primary">Novo Serviço</h4>
+      <button onclick="document.getElementById('modal-novo').classList.add('hidden')"
+        class="material-symbols-outlined text-on-surface-variant hover:text-on-surface cursor-pointer">close</button>
+    </div>
+    <form method="POST" action="{{ url_for('admin_servico_novo') }}" class="space-y-5">
+      <div>
+        <label class="block font-body text-[13px] text-on-surface-variant uppercase tracking-widest mb-2">Nome do Serviço *</label>
+        <input type="text" name="nome" required placeholder="Ex: Hidratação Capilar"
+          class="w-full bg-surface-container-low border border-outline-variant/40 focus:border-primary focus:ring-0 text-on-surface py-3 px-4 transition-colors placeholder:text-outline-variant/50 font-body"/>
+      </div>
+      <div class="grid grid-cols-3 gap-4">
+        <div>
+          <label class="block font-body text-[13px] text-on-surface-variant uppercase tracking-widest mb-2">Preço (R$) *</label>
+          <input type="number" name="preco" required step="0.01" min="0" placeholder="00.00"
+            class="w-full bg-surface-container-low border border-outline-variant/40 focus:border-primary focus:ring-0 text-on-surface py-3 px-4 transition-colors font-body"/>
+        </div>
+        <div>
+          <label class="block font-body text-[13px] text-on-surface-variant uppercase tracking-widest mb-2">Duração (min) *</label>
+          <input type="number" name="duracao" required min="5" placeholder="45"
+            class="w-full bg-surface-container-low border border-outline-variant/40 focus:border-primary focus:ring-0 text-on-surface py-3 px-4 transition-colors font-body"/>
+        </div>
+        <div>
+          <label class="block font-body text-[13px] text-on-surface-variant uppercase tracking-widest mb-2">Categoria</label>
+          <select name="categoria"
+            class="w-full bg-surface-container-low border border-outline-variant/40 focus:border-primary focus:ring-0 text-on-surface py-3 px-4 transition-colors font-body">
+            <option>Corte</option><option>Barba</option><option>Combo</option>
+            <option>Tratamento</option><option>Manutenção</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="block font-body text-[13px] text-on-surface-variant uppercase tracking-widest mb-2">Descrição</label>
+        <textarea name="descricao" rows="3" placeholder="Descreva o serviço..."
+          class="w-full bg-surface-container-low border border-outline-variant/40 focus:border-primary focus:ring-0 text-on-surface py-3 px-4 transition-colors resize-none placeholder:text-outline-variant/50 font-body"></textarea>
+      </div>
+      <div class="pt-4 flex gap-3">
+        <button type="submit" class="flex-1 bg-primary text-on-primary py-3 font-body uppercase tracking-widest font-bold hover:bg-primary-container transition-all active:scale-95">
+          SALVAR
+        </button>
+        <button type="button" onclick="document.getElementById('modal-novo').classList.add('hidden')"
+          class="flex-1 border border-outline-variant text-on-surface-variant py-3 font-body uppercase tracking-widest hover:text-on-surface transition-all">
+          CANCELAR
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL EDITAR -->
+<div id="modal-editar" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+  <div class="bg-surface-container-high w-full max-w-lg border border-outline-variant/30 p-8 shadow-2xl">
+    <div class="flex justify-between items-center mb-8">
+      <h4 class="font-display text-[24px] text-primary">Editar Serviço</h4>
+      <button onclick="document.getElementById('modal-editar').classList.add('hidden')"
+        class="material-symbols-outlined text-on-surface-variant hover:text-on-surface cursor-pointer">close</button>
+    </div>
+    <form method="POST" id="form-editar" class="space-y-5">
+      <div>
+        <label class="block font-body text-[13px] text-on-surface-variant uppercase tracking-widest mb-2">Nome do Serviço *</label>
+        <input type="text" name="nome" id="edit-nome" required
+          class="w-full bg-surface-container-low border border-outline-variant/40 focus:border-primary focus:ring-0 text-on-surface py-3 px-4 transition-colors font-body"/>
+      </div>
+      <div class="grid grid-cols-3 gap-4">
+        <div>
+          <label class="block font-body text-[13px] text-on-surface-variant uppercase tracking-widest mb-2">Preço (R$) *</label>
+          <input type="number" name="preco" id="edit-preco" required step="0.01"
+            class="w-full bg-surface-container-low border border-outline-variant/40 focus:border-primary focus:ring-0 text-on-surface py-3 px-4 font-body"/>
+        </div>
+        <div>
+          <label class="block font-body text-[13px] text-on-surface-variant uppercase tracking-widest mb-2">Duração (min)</label>
+          <input type="number" name="duracao" id="edit-duracao" required
+            class="w-full bg-surface-container-low border border-outline-variant/40 focus:border-primary focus:ring-0 text-on-surface py-3 px-4 font-body"/>
+        </div>
+        <div>
+          <label class="block font-body text-[13px] text-on-surface-variant uppercase tracking-widest mb-2">Categoria</label>
+          <select name="categoria" id="edit-categoria"
+            class="w-full bg-surface-container-low border border-outline-variant/40 focus:border-primary focus:ring-0 text-on-surface py-3 px-4 font-body">
+            <option>Corte</option><option>Barba</option><option>Combo</option>
+            <option>Tratamento</option><option>Manutenção</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="block font-body text-[13px] text-on-surface-variant uppercase tracking-widest mb-2">Descrição</label>
+        <textarea name="descricao" id="edit-descricao" rows="3"
+          class="w-full bg-surface-container-low border border-outline-variant/40 focus:border-primary focus:ring-0 text-on-surface py-3 px-4 resize-none font-body"></textarea>
+      </div>
+      <div class="pt-4 flex gap-3">
+        <button type="submit" class="flex-1 bg-primary text-on-primary py-3 font-body uppercase tracking-widest font-bold hover:bg-primary-container transition-all active:scale-95">
+          ATUALIZAR
+        </button>
+        <button type="button" onclick="document.getElementById('modal-editar').classList.add('hidden')"
+          class="flex-1 border border-outline-variant text-on-surface-variant py-3 font-body uppercase tracking-widest hover:text-on-surface transition-all">
+          CANCELAR
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openEdit(id, nome, descricao, preco, duracao, categoria) {
+  document.getElementById('form-editar').action = `/admin/servicos/editar/${id}`;
+  document.getElementById('edit-nome').value = nome;
+  document.getElementById('edit-descricao').value = descricao;
+  document.getElementById('edit-preco').value = preco;
+  document.getElementById('edit-duracao').value = duracao;
+  document.getElementById('edit-categoria').value = categoria;
+  document.getElementById('modal-editar').classList.remove('hidden');
+}
+</script>
+{% endblock %}

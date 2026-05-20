@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>{% block title %}Barbearia Eclipse{% endblock %}</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<script>
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "primary": "#f2ca50",
+        "primary-container": "#d4af37",
+        "on-primary": "#3c2f00",
+        "on-primary-container": "#554300",
+        "background": "#131313",
+        "surface": "#131313",
+        "surface-dim": "#131313",
+        "surface-container-lowest": "#0e0e0e",
+        "surface-container-low": "#1c1b1b",
+        "surface-container": "#201f1f",
+        "surface-container-high": "#2a2a2a",
+        "surface-container-highest": "#353534",
+        "surface-variant": "#353534",
+        "surface-bright": "#3a3939",
+        "on-background": "#e5e2e1",
+        "on-surface": "#e5e2e1",
+        "on-surface-variant": "#d0c5af",
+        "outline": "#99907c",
+        "outline-variant": "#4d4635",
+        "secondary": "#c4c7ca",
+        "secondary-container": "#46494d",
+        "on-secondary": "#2d3134",
+        "on-secondary-container": "#b6b8bc",
+        "tertiary": "#d0cdcd",
+        "tertiary-container": "#b4b2b2",
+        "on-tertiary": "#313030",
+        "on-tertiary-container": "#454544",
+        "error": "#ffb4ab",
+        "error-container": "#93000a",
+        "on-error": "#690005",
+        "surface-tint": "#e9c349",
+        "inverse-surface": "#e5e2e1",
+        "inverse-on-surface": "#313030",
+        "inverse-primary": "#735c00",
+        "success": "#4ade80",
+        "warning": "#fbbf24"
+      },
+      fontFamily: {
+        "display": ["Playfair Display", "serif"],
+        "body": ["Hanken Grotesk", "sans-serif"],
+      },
+      spacing: {
+        "container-max": "1200px",
+        "margin-desktop": "48px",
+        "margin-mobile": "16px",
+        "section-gap": "120px",
+        "gutter": "24px",
+      }
+    }
+  }
+}
+</script>
+<style>
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    display: inline-block; line-height: 1;
+  }
+  .fill-icon { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #131313; }
+  ::-webkit-scrollbar-thumb { background: #353534; border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: #4d4635; }
+  .flash-success { background: rgba(74,222,128,0.15); border-left: 4px solid #4ade80; color: #4ade80; }
+  .flash-error   { background: rgba(255,180,171,0.15); border-left: 4px solid #ffb4ab; color: #ffb4ab; }
+</style>
+{% block extra_head %}{% endblock %}
+</head>
+<body class="bg-background text-on-background font-body min-h-screen">
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 w-80">
+      {% for category, message in messages %}
+        <div class="flash-{{ category }} px-5 py-4 rounded text-sm font-body font-semibold shadow-2xl flex items-center gap-3">
+          <span class="material-symbols-outlined text-[18px]">
+            {% if category == 'success' %}check_circle{% else %}error{% endif %}
+          </span>
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+    <script>
+      setTimeout(() => {
+        document.querySelectorAll('[class*="flash-"]').forEach(el => {
+          el.style.transition = 'opacity 0.5s';
+          el.style.opacity = '0';
+          setTimeout(() => el.remove(), 500);
+        });
+      }, 3500);
+    </script>
+  {% endif %}
+{% endwith %}
+
+{% block body %}{% endblock %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

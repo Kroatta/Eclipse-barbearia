@@ -1,0 +1,104 @@
+{% extends "admin/base_admin.html" %}
+{% block admin_title %}Gerenciar Barbeiros{% endblock %}
+
+{% block admin_content %}
+<div class="flex items-end justify-between mb-8">
+  <div>
+    <span class="text-primary font-body text-[12px] uppercase tracking-[0.3em] block mb-2">Administração</span>
+    <h1 class="font-display text-[32px] text-on-background font-semibold">Gerenciar Equipe</h1>
+  </div>
+  <button onclick="document.getElementById('modal-novo').classList.remove('hidden')"
+    class="bg-primary text-on-primary font-body text-[14px] px-8 py-3 flex items-center gap-2 uppercase tracking-widest font-bold hover:bg-primary-container transition-all active:scale-95">
+    <span class="material-symbols-outlined">person_add</span> ADICIONAR BARBEIRO
+  </button>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+  {% for b in barbeiros %}
+  <div class="bg-surface-container-low border border-outline-variant/20 group hover:border-primary transition-colors overflow-hidden">
+    <div class="flex">
+      <div class="w-32 h-40 bg-surface-container flex items-center justify-center shrink-0">
+        <span class="font-display text-primary/30 text-[60px]">{{ b.nome[0] }}</span>
+      </div>
+      <div class="flex-1 p-5 flex flex-col justify-between">
+        <div>
+          <div class="flex justify-between items-start">
+            <h3 class="font-body text-[16px] font-bold text-on-surface">{{ b.nome }}</h3>
+            <span class="font-body text-[10px] px-2 py-0.5 font-bold uppercase tracking-tighter
+              {% if b.nivel == 'Sênior' %}bg-primary-container text-on-primary-container
+              {% else %}bg-surface-variant text-on-surface-variant{% endif %}">
+              {{ b.nivel }}
+            </span>
+          </div>
+          <p class="font-body text-[12px] text-primary uppercase mt-1 tracking-wider">{{ b.especialidade.split(',')[0] }}</p>
+          <div class="flex flex-wrap gap-1 mt-2">
+            {% for esp in b.especialidade.split(',')[:2] %}
+            <span class="border border-outline-variant/30 text-[10px] font-body px-2 py-0.5 text-on-surface-variant">{{ esp.strip() }}</span>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="flex gap-3 mt-3">
+          <button class="text-on-surface-variant hover:text-primary flex items-center gap-1 font-body text-[12px] uppercase tracking-wide transition-colors">
+            <span class="material-symbols-outlined text-[16px]">edit</span> Editar
+          </button>
+          <a href="{{ url_for('admin_barbeiro_excluir', id=b.id) }}"
+             onclick="return confirm('Remover {{ b.nome }}?')"
+             class="text-on-surface-variant hover:text-error flex items-center gap-1 font-body text-[12px] uppercase tracking-wide transition-colors">
+            <span class="material-symbols-outlined text-[16px]">delete</span> Excluir
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- MODAL NOVO BARBEIRO -->
+<div id="modal-novo" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+  <div class="bg-surface-container-high w-full max-w-2xl border border-outline-variant/30 p-8 shadow-2xl">
+    <div class="flex justify-between items-center mb-8">
+      <div>
+        <h2 class="font-display text-[24px] text-primary">Novo Barbeiro</h2>
+        <p class="font-body text-[13px] text-on-surface-variant uppercase mt-1">Cadastrar profissional na plataforma</p>
+      </div>
+      <button onclick="document.getElementById('modal-novo').classList.add('hidden')"
+        class="material-symbols-outlined text-on-surface-variant hover:text-primary cursor-pointer text-[28px]">close</button>
+    </div>
+    <form method="POST" action="{{ url_for('admin_barbeiro_novo') }}" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label class="block font-body text-[13px] text-on-surface-variant uppercase tracking-widest mb-2">Nome Completo *</label>
+        <input type="text" name="nome" required placeholder="Ex: Carlos Pereira"
+          class="w-full bg-surface-container-low border-0 border-b border-outline focus:border-primary focus:ring-0 text-on-surface py-2 px-0 font-body transition-colors placeholder:text-outline-variant"/>
+      </div>
+      <div>
+        <label class="block font-body text-[13px] text-on-surface-variant uppercase tracking-widest mb-2">Cargo / Nível</label>
+        <select name="nivel"
+          class="w-full bg-surface-container-low border-0 border-b border-outline focus:border-primary focus:ring-0 text-on-surface py-2 px-0 font-body appearance-none">
+          <option>Mestre Barbeiro</option><option>Sênior</option>
+          <option selected>Pleno</option><option>Especialista</option>
+        </select>
+      </div>
+      <div>
+        <label class="block font-body text-[13px] text-on-surface-variant uppercase tracking-widest mb-2">Especialidades *</label>
+        <input type="text" name="especialidade" required placeholder="Fade, Navalha, Pigmentação"
+          class="w-full bg-surface-container-low border-0 border-b border-outline focus:border-primary focus:ring-0 text-on-surface py-2 px-0 font-body placeholder:text-outline-variant"/>
+      </div>
+      <div>
+        <label class="block font-body text-[13px] text-on-surface-variant uppercase tracking-widest mb-2">Biografia Curta</label>
+        <input type="text" name="bio" placeholder="Resumo profissional..."
+          class="w-full bg-surface-container-low border-0 border-b border-outline focus:border-primary focus:ring-0 text-on-surface py-2 px-0 font-body placeholder:text-outline-variant"/>
+      </div>
+      <div class="md:col-span-2 pt-4 flex gap-3 justify-end">
+        <button type="button" onclick="document.getElementById('modal-novo').classList.add('hidden')"
+          class="px-8 py-3 font-body text-[14px] font-bold border border-outline-variant text-on-surface uppercase tracking-widest hover:bg-surface-variant transition-colors">
+          CANCELAR
+        </button>
+        <button type="submit"
+          class="px-8 py-3 font-body text-[14px] font-bold bg-primary text-on-primary uppercase tracking-widest active:scale-95 transition-transform hover:bg-primary-container">
+          SALVAR PROFISSIONAL
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

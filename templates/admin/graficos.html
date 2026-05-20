@@ -1,0 +1,343 @@
+{% extends "admin/base_admin.html" %}
+{% block admin_title %}Gráficos & Relatórios{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block admin_content %}
+<div class="mb-8 flex items-end justify-between">
+  <div>
+    <span class="text-primary font-body text-[12px] uppercase tracking-[0.3em] block mb-2">Analytics</span>
+    <h1 class="font-display text-[32px] text-on-background font-semibold">Gráficos & Relatórios</h1>
+    <p class="text-on-surface-variant font-body mt-1">Exclusivo para administradores — dados em tempo real</p>
+  </div>
+  <!-- PERIOD SELECTOR -->
+  <div class="flex bg-surface-container-low border border-outline-variant/20 p-1 gap-1">
+    <button onclick="setPeriod('diario')" id="btn-diario"
+      class="period-btn px-4 py-2 font-body text-[13px] uppercase tracking-wider transition-all active-period">
+      Diário
+    </button>
+    <button onclick="setPeriod('mensal')" id="btn-mensal"
+      class="period-btn px-4 py-2 font-body text-[13px] uppercase tracking-wider transition-all">
+      Mensal
+    </button>
+    <button onclick="setPeriod('anual')" id="btn-anual"
+      class="period-btn px-4 py-2 font-body text-[13px] uppercase tracking-wider transition-all">
+      Anual
+    </button>
+  </div>
+</div>
+
+<!-- KPI ROW -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" id="kpi-row">
+  <div class="bg-surface-container border border-outline-variant/20 p-5">
+    <p class="font-body text-[11px] text-on-surface-variant uppercase tracking-widest mb-2">Agendamentos</p>
+    <p class="font-display text-[28px] text-primary font-bold" id="kpi-total">—</p>
+  </div>
+  <div class="bg-surface-container border border-outline-variant/20 p-5">
+    <p class="font-body text-[11px] text-on-surface-variant uppercase tracking-widest mb-2">Receita</p>
+    <p class="font-display text-[28px] text-primary font-bold" id="kpi-receita">—</p>
+  </div>
+  <div class="bg-surface-container border border-outline-variant/20 p-5">
+    <p class="font-body text-[11px] text-on-surface-variant uppercase tracking-widest mb-2">Serviço TOP</p>
+    <p class="font-display text-[20px] text-on-background font-bold" id="kpi-top-servico">—</p>
+  </div>
+  <div class="bg-surface-container border border-outline-variant/20 p-5">
+    <p class="font-body text-[11px] text-on-surface-variant uppercase tracking-widest mb-2">Barbeiro TOP</p>
+    <p class="font-display text-[20px] text-on-background font-bold" id="kpi-top-barbeiro">—</p>
+  </div>
+</div>
+
+<!-- MAIN CHARTS GRID -->
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
+
+  <!-- CHART 1: Agendamentos por período -->
+  <div class="xl:col-span-2 bg-surface-container-low border border-outline-variant/20 p-6">
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h3 class="font-body text-[16px] text-on-background font-semibold uppercase tracking-wider">Agendamentos por Período</h3>
+        <p class="font-body text-[13px] text-on-surface-variant mt-1" id="chart-subtitle">Hoje — por hora</p>
+      </div>
+      <span class="material-symbols-outlined text-primary/40 text-[32px]">trending_up</span>
+    </div>
+    <div class="relative" style="height:300px">
+      <canvas id="chartPeriodo"></canvas>
+    </div>
+  </div>
+
+  <!-- CHART 2: Serviços populares -->
+  <div class="bg-surface-container-low border border-outline-variant/20 p-6">
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="font-body text-[16px] text-on-background font-semibold uppercase tracking-wider">Top Serviços</h3>
+      <span class="material-symbols-outlined text-primary/40 text-[28px]">content_cut</span>
+    </div>
+    <div class="relative" style="height:300px">
+      <canvas id="chartServicos"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+  <!-- CHART 3: Barbeiros ranking -->
+  <div class="bg-surface-container-low border border-outline-variant/20 p-6">
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="font-body text-[16px] text-on-background font-semibold uppercase tracking-wider">Ranking Barbeiros</h3>
+      <span class="material-symbols-outlined text-primary/40 text-[28px]">emoji_events</span>
+    </div>
+    <div class="relative" style="height:250px">
+      <canvas id="chartBarbeiros"></canvas>
+    </div>
+  </div>
+
+  <!-- CHART 4: Receita por serviço -->
+  <div class="bg-surface-container-low border border-outline-variant/20 p-6">
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="font-body text-[16px] text-on-background font-semibold uppercase tracking-wider">Receita por Serviço</h3>
+      <span class="material-symbols-outlined text-primary/40 text-[28px]">payments</span>
+    </div>
+    <div class="relative" style="height:250px">
+      <canvas id="chartReceita"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- TABLE: Detalhes serviços -->
+<div class="mt-6 bg-surface-container-low border border-outline-variant/20 p-6">
+  <h3 class="font-body text-[16px] text-on-background font-semibold uppercase tracking-wider mb-6">Detalhes — Serviços (mais pedidos → menos pedidos)</h3>
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead>
+        <tr class="border-b border-outline-variant/20">
+          <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-left pb-3 pr-4">#</th>
+          <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-left pb-3 pr-4">Serviço</th>
+          <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-right pb-3 pr-4">Agendamentos</th>
+          <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-right pb-3 pr-4">Receita Total</th>
+          <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-right pb-3">Participação</th>
+        </tr>
+      </thead>
+      <tbody id="table-servicos" class="divide-y divide-outline-variant/10"></tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .period-btn { color: #d0c5af; }
+  .active-period { background: #f2ca50; color: #3c2f00; font-weight: 700; }
+</style>
+
+<script>
+const GOLD    = '#f2ca50';
+const GOLD2   = '#d4af37';
+const GOLD3   = '#e9c349';
+const GOLD4   = '#b8963e';
+const GOLD5   = '#ffd980';
+const GOLD6   = '#a07830';
+const SURFACE = '#201f1f';
+const TEXT    = '#d0c5af';
+
+const chartDefaults = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { labels: { color: TEXT, font: { family: 'Hanken Grotesk', size: 12 }, padding: 16 } },
+    tooltip: {
+      backgroundColor: '#2a2a2a', titleColor: GOLD, bodyColor: '#e5e2e1',
+      borderColor: '#4d4635', borderWidth: 1,
+      callbacks: {}
+    }
+  },
+  scales: {
+    x: { ticks: { color: TEXT, font: { family: 'Hanken Grotesk' } }, grid: { color: 'rgba(77,70,53,0.3)' } },
+    y: { ticks: { color: TEXT, font: { family: 'Hanken Grotesk' } }, grid: { color: 'rgba(77,70,53,0.3)' } }
+  }
+};
+
+let chartPeriodo, chartServicos, chartBarbeiros, chartReceita;
+let currentPeriod = 'diario';
+let servicosData = [];
+
+// Init charts
+window.addEventListener('DOMContentLoaded', () => {
+  initStaticCharts();
+  loadPeriod('diario');
+});
+
+function initStaticCharts() {
+  // Serviços populares (doughnut)
+  fetch('/api/graficos/servicos-populares')
+    .then(r => r.json())
+    .then(data => {
+      servicosData = data;
+      const maxTotal = Math.max(...data.map(d => d.total));
+
+      // Doughnut
+      const ctx2 = document.getElementById('chartServicos').getContext('2d');
+      chartServicos = new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+          labels: data.map(d => d.nome),
+          datasets: [{ data: data.map(d => d.total),
+            backgroundColor: [GOLD, GOLD2, GOLD3, GOLD4, GOLD5, GOLD6],
+            borderColor: SURFACE, borderWidth: 4 }]
+        },
+        options: { ...chartDefaults, cutout: '60%',
+          plugins: { ...chartDefaults.plugins,
+            legend: { position: 'bottom', labels: { color: TEXT, font: { family:'Hanken Grotesk', size:11 }, padding: 10 } } } }
+      });
+
+      // Receita horizontal bar
+      const ctx4 = document.getElementById('chartReceita').getContext('2d');
+      chartReceita = new Chart(ctx4, {
+        type: 'bar',
+        data: {
+          labels: data.map(d => d.nome.length > 12 ? d.nome.substring(0,12)+'…' : d.nome),
+          datasets: [{ label: 'Receita (R$)',
+            data: data.map(d => d.receita || 0),
+            backgroundColor: data.map((_, i) => i === 0 ? GOLD : GOLD+'66'),
+            borderColor: 'transparent', borderRadius: 3 }]
+        },
+        options: { ...chartDefaults, indexAxis: 'y',
+          plugins: { ...chartDefaults.plugins, legend: { display: false },
+            tooltip: { ...chartDefaults.plugins.tooltip,
+              callbacks: { label: ctx => `R$ ${ctx.parsed.x.toFixed(0)}` } } } }
+      });
+
+      // Table
+      const tbody = document.getElementById('table-servicos');
+      const totalGeral = data.reduce((s, d) => s + d.total, 0);
+      tbody.innerHTML = data.map((d, i) => {
+        const pct = totalGeral > 0 ? ((d.total / totalGeral) * 100).toFixed(1) : 0;
+        const barW = totalGeral > 0 ? (d.total / maxTotal * 100).toFixed(0) : 0;
+        return `<tr>
+          <td class="py-3 pr-4 font-body text-[14px] text-primary font-bold">${i+1}º</td>
+          <td class="py-3 pr-4">
+            <p class="font-body text-[14px] text-on-background font-semibold">${d.nome}</p>
+            <div class="mt-1 h-1 bg-outline-variant/20 rounded-full w-48">
+              <div class="h-1 bg-primary rounded-full transition-all" style="width:${barW}%"></div>
+            </div>
+          </td>
+          <td class="py-3 pr-4 text-right font-body text-[16px] text-on-background font-bold">${d.total}</td>
+          <td class="py-3 pr-4 text-right font-body text-[16px] text-primary">R$ ${(d.receita||0).toFixed(0)}</td>
+          <td class="py-3 text-right font-body text-[14px] text-on-surface-variant">${pct}%</td>
+        </tr>`;
+      }).join('');
+
+      // Update KPIs
+      if (data.length > 0) {
+        document.getElementById('kpi-top-servico').textContent = data[0].nome.split(' ')[0];
+      }
+    });
+
+  // Barbeiros ranking
+  fetch('/api/graficos/barbeiros-ranking')
+    .then(r => r.json())
+    .then(data => {
+      const ctx3 = document.getElementById('chartBarbeiros').getContext('2d');
+      chartBarbeiros = new Chart(ctx3, {
+        type: 'bar',
+        data: {
+          labels: data.map(d => d.nome.split(' ')[0]),
+          datasets: [
+            { label: 'Agendamentos', data: data.map(d => d.total),
+              backgroundColor: GOLD, borderColor: 'transparent', borderRadius: 4, yAxisID: 'y' },
+            { label: 'Receita (÷10)', data: data.map(d => (d.receita||0)/10),
+              backgroundColor: GOLD+'44', borderColor: 'transparent', borderRadius: 4, yAxisID: 'y' }
+          ]
+        },
+        options: { ...chartDefaults,
+          plugins: { ...chartDefaults.plugins,
+            legend: { labels: { color: TEXT, font: { family:'Hanken Grotesk', size:11 }, padding:10 } } } }
+      });
+
+      if (data.length > 0) {
+        document.getElementById('kpi-top-barbeiro').textContent = data[0].nome.split(' ')[0];
+      }
+    });
+}
+
+function loadPeriod(period) {
+  currentPeriod = period;
+  const subtitles = { diario: 'Hoje — por hora', mensal: 'Este mês — por dia', anual: 'Este ano — por mês' };
+  document.getElementById('chart-subtitle').textContent = subtitles[period];
+
+  const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  fetch(`/api/graficos/${period}`)
+    .then(r => r.json())
+    .then(data => {
+      let labels, totais, receitas;
+      if (period === 'diario') {
+        labels = data.map(d => d.hora);
+        totais = data.map(d => d.total);
+        receitas = data.map(d => d.receita || 0);
+      } else if (period === 'mensal') {
+        labels = data.map(d => `Dia ${parseInt(d.dia)}`);
+        totais = data.map(d => d.total);
+        receitas = data.map(d => d.receita || 0);
+      } else {
+        labels = data.map(d => meses[parseInt(d.mes)-1] || d.mes);
+        totais = data.map(d => d.total);
+        receitas = data.map(d => d.receita || 0);
+      }
+
+      // Fallback se vazio
+      if (labels.length === 0) {
+        if (period === 'diario') {
+          labels = ['08:00','09:00','10:00','11:00','12:00','14:00','15:00','16:00','17:00'];
+          totais = [0,0,0,0,0,0,0,0,0];
+          receitas = [0,0,0,0,0,0,0,0,0];
+        }
+      }
+
+      const totalSum = totais.reduce((a,b) => a+b, 0);
+      const receitaSum = receitas.reduce((a,b) => a+b, 0);
+      document.getElementById('kpi-total').textContent = totalSum;
+      document.getElementById('kpi-receita').textContent = `R$ ${receitaSum.toFixed(0)}`;
+
+      if (chartPeriodo) chartPeriodo.destroy();
+      const ctx1 = document.getElementById('chartPeriodo').getContext('2d');
+      chartPeriodo = new Chart(ctx1, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Agendamentos', data: totais, type: 'bar',
+              backgroundColor: GOLD+'88', borderColor: GOLD, borderWidth: 2, borderRadius: 4, yAxisID: 'y' },
+            { label: 'Receita (R$)', data: receitas, type: 'line',
+              borderColor: GOLD2, backgroundColor: GOLD2+'22', fill: true,
+              tension: 0.4, pointBackgroundColor: GOLD2, pointRadius: 4, yAxisID: 'y1' }
+          ]
+        },
+        options: {
+          ...chartDefaults, interaction: { mode: 'index', intersect: false },
+          plugins: { ...chartDefaults.plugins,
+            tooltip: { ...chartDefaults.plugins.tooltip,
+              callbacks: {
+                label: ctx => ctx.datasetIndex === 0
+                  ? ` ${ctx.parsed.y} agendamentos`
+                  : ` R$ ${ctx.parsed.y.toFixed(0)}`
+              }
+            }
+          },
+          scales: {
+            x: chartDefaults.scales.x,
+            y: { ...chartDefaults.scales.y, position: 'left', title: { display:true, text:'Agendamentos', color:TEXT } },
+            y1: { ...chartDefaults.scales.y, position:'right', title: { display:true, text:'Receita R$', color:TEXT }, grid: { drawOnChartArea: false } }
+          }
+        }
+      });
+    });
+}
+
+function setPeriod(p) {
+  document.querySelectorAll('.period-btn').forEach(btn => {
+    btn.classList.remove('active-period');
+    btn.classList.add('text-[#d0c5af]');
+  });
+  document.getElementById(`btn-${p}`).classList.add('active-period');
+  loadPeriod(p);
+}
+</script>
+{% endblock %}

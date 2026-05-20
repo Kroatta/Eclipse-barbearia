@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Cadastro — Barbearia Eclipse{% endblock %}
+{% block body %}
+<div class="min-h-screen bg-background flex items-center justify-center px-4 py-12">
+  <div class="w-full max-w-md">
+    <div class="text-center mb-12">
+      <a href="{{ url_for('index') }}" class="font-display text-primary text-[48px] font-bold tracking-tighter uppercase block hover:opacity-80 transition-opacity">ECLIPSE</a>
+      <p class="text-on-surface-variant font-body text-[14px] uppercase tracking-[0.3em] mt-2">Barbearia Premium</p>
+    </div>
+    <div class="bg-surface-container-low border border-outline-variant/20 p-10">
+      <h2 class="font-display text-[28px] text-on-background mb-8 font-semibold">Criar sua conta</h2>
+      <form method="POST" class="space-y-6">
+        <div>
+          <label class="block font-body text-[14px] text-on-surface-variant uppercase tracking-widest mb-2">Nome Completo *</label>
+          <input type="text" name="nome" required placeholder="Seu nome completo"
+            class="w-full bg-surface-container border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-3 px-0 transition-colors placeholder:text-outline-variant font-body"/>
+        </div>
+        <div>
+          <label class="block font-body text-[14px] text-on-surface-variant uppercase tracking-widest mb-2">Email *</label>
+          <input type="email" name="email" required placeholder="seu@email.com"
+            class="w-full bg-surface-container border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-3 px-0 transition-colors placeholder:text-outline-variant font-body"/>
+        </div>
+        <div>
+          <label class="block font-body text-[14px] text-on-surface-variant uppercase tracking-widest mb-2">Telefone</label>
+          <input type="tel" name="telefone" placeholder="(61) 99999-9999"
+            class="w-full bg-surface-container border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-3 px-0 transition-colors placeholder:text-outline-variant font-body"/>
+        </div>
+        <div>
+          <label class="block font-body text-[14px] text-on-surface-variant uppercase tracking-widest mb-2">Senha *</label>
+          <input type="password" name="senha" required placeholder="Mínimo 6 caracteres"
+            class="w-full bg-surface-container border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-3 px-0 transition-colors placeholder:text-outline-variant font-body"/>
+        </div>
+        <div class="pt-4">
+          <button type="submit" class="w-full bg-primary text-on-primary py-4 font-body tracking-widest uppercase font-bold hover:bg-primary-container transition-all active:scale-95">
+            CRIAR CONTA
+          </button>
+        </div>
+      </form>
+      <div class="mt-8 pt-6 border-t border-outline-variant/10 text-center">
+        <p class="text-on-surface-variant font-body text-[16px]">Já tem conta? <a href="{{ url_for('login') }}" class="text-primary hover:underline font-semibold">Faça login</a></p>
+      </div>
+    </div>
+    <div class="text-center mt-6">
+      <a href="{{ url_for('index') }}" class="text-on-surface-variant font-body text-[14px] hover:text-primary transition-colors">← Voltar ao site</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
