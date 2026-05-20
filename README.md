@@ -51,12 +51,12 @@ http://localhost:5000
 ## 🔐 Credenciais de Acesso
 
 ### Administrador
-- **URL de Login**: `/admin/login`
+- **URL de Login**: `http://localhost:5000/admin/login`
 - **Email**: `admin@eclipse.com`
 - **Senha**: `admin123`
 
 ### Cliente (para testar)
-- **URL de Login**: `/login`
+- **URL de Login**: `http://localhost:5000/login`
 - **Email**: `cliente@eclipse.com`
 - **Senha**: `cliente123`
 
