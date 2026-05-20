@@ -507,11 +507,15 @@ def admin_agendamento_novo():
 @admin_required
 def admin_agendamento_status(id):
     status = request.form.get('status')
+    origem = request.form.get('origem', 'calendario')
     if status in ('confirmado', 'concluido', 'cancelado'):
         db = get_db()
         db.execute("UPDATE agendamentos SET status=? WHERE id=?", (status, id))
         db.commit()
         db.close()
+    if origem == 'lista':
+        flash('Status atualizado com sucesso!', 'success')
+        return redirect(url_for('admin_agendamentos'))
     return ('', 204)
 
 # ─── API DE DADOS PARA GRÁFICOS ──────────────────────────────────────────────
