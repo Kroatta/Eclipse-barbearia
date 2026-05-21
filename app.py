@@ -5,6 +5,8 @@ TCC - Backend com Flask + SQLite
 
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_mail import Mail, Message
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 import sqlite3
 import os
 from datetime import datetime, date, timedelta
@@ -12,6 +14,16 @@ from functools import wraps
 
 app = Flask(__name__)
 app.secret_key = 'eclipse_barbearia_tcc_2024_secret_key'
+
+# ─── EMAIL ───────────────────────────────────────────────────────────────────
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'seuemail@gmail.com'      # Troque pelo seu Gmail
+app.config['MAIL_PASSWORD'] = 'sua_senha_de_app'        # Senha de App do Google
+app.config['MAIL_DEFAULT_SENDER'] = 'seuemail@gmail.com'
+mail = Mail(app)
+serializer = URLSafeTimedSerializer(app.secret_key)
 
 # ─── DATABASE ───────────────────────────────────────────────────────────────
 
@@ -205,6 +217,66 @@ def login():
             return redirect(url_for('meus_agendamentos'))
         flash('Email ou senha incorretos.', 'error')
     return render_template('client/login.html')
+
+@app.route('/esqueci-senha', methods=['GET', 'POST'])
+def esqueci_senha():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip()
+        db = get_db()
+        user = db.execute("SELECT * FROM usuarios WHERE email=? AND is_admin=0", (email,)).fetchone()
+        db.close()
+        if user:
+            token = serializer.dumps(email, salt='reset-senha')
+            reset_url = url_for('resetar_senha', token=token, _external=True)
+            try:
+                msg = Message('Recuperacao de Senha — Barbearia Eclipse', recipients=[email])
+                msg.html = f'''
+                <div style="font-family:sans-serif;max-width:480px;margin:auto;background:#131313;color:#e5e2e1;padding:40px;border:1px solid #4d4635;">
+                  <h1 style="color:#f2ca50;font-size:28px;margin-bottom:8px;">ECLIPSE</h1>
+                  <p style="color:#d0c5af;font-size:12px;text-transform:uppercase;letter-spacing:4px;margin-bottom:32px;">Barbearia Premium</p>
+                  <h2 style="font-size:20px;margin-bottom:16px;">Recuperacao de Senha</h2>
+                  <p style="color:#d0c5af;margin-bottom:24px;">Clique no botao abaixo para redefinir sua senha. O link expira em <strong style="color:#f2ca50;">1 hora</strong>.</p>
+                  <a href="{reset_url}" style="display:inline-block;background:#f2ca50;color:#131313;padding:14px 32px;text-decoration:none;font-weight:bold;text-transform:uppercase;letter-spacing:2px;margin-bottom:24px;">
+                    Redefinir Senha
+                  </a>
+                  <p style="color:#99907c;font-size:12px;">Se voce nao solicitou a recuperacao de senha, ignore este email.</p>
+                </div>
+                '''
+                mail.send(msg)
+            except Exception:
+                flash('Erro ao enviar email. Verifique as configuracoes de email no servidor.', 'error')
+                return render_template('client/esqueci_senha.html')
+        flash('Se o email estiver cadastrado, voce recebera um link de recuperacao em breve.', 'success')
+        return redirect(url_for('login'))
+    return render_template('client/esqueci_senha.html')
+
+@app.route('/resetar-senha/<token>', methods=['GET', 'POST'])
+def resetar_senha(token):
+    try:
+        email = serializer.loads(token, salt='reset-senha', max_age=3600)
+    except SignatureExpired:
+        flash('Link expirado. Solicite um novo.', 'error')
+        return redirect(url_for('esqueci_senha'))
+    except BadSignature:
+        flash('Link invalido. Solicite um novo.', 'error')
+        return redirect(url_for('esqueci_senha'))
+    if request.method == 'POST':
+        nova_senha = request.form.get('senha', '')
+        confirmar = request.form.get('confirmar', '')
+        if len(nova_senha) < 6:
+            flash('A senha deve ter pelo menos 6 caracteres.', 'error')
+            return render_template('client/resetar_senha.html', token=token)
+        if nova_senha != confirmar:
+            flash('As senhas nao coincidem.', 'error')
+            return render_template('client/resetar_senha.html', token=token)
+        db = get_db()
+        db.execute("UPDATE usuarios SET senha=? WHERE email=?",
+                   (generate_password_hash(nova_senha), email))
+        db.commit()
+        db.close()
+        flash('Senha alterada com sucesso! Faca login.', 'success')
+        return redirect(url_for('login'))
+    return render_template('client/resetar_senha.html', token=token)
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Redefinir Senha — Barbearia Eclipse{% endblock %}
+{% block body %}
+<div class="min-h-screen bg-background flex items-center justify-center px-4 py-12">
+  <div class="w-full max-w-md">
+    <div class="text-center mb-12">
+      <a href="{{ url_for('index') }}" class="font-display text-primary text-[48px] font-bold tracking-tighter uppercase block hover:opacity-80 transition-opacity">ECLIPSE</a>
+      <p class="text-on-surface-variant font-body text-[14px] uppercase tracking-[0.3em] mt-2">Nova Senha</p>
+    </div>
+    <div class="bg-surface-container-low border border-outline-variant/20 p-10">
+      <div class="flex items-center gap-3 mb-6">
+        <span class="material-symbols-outlined text-primary text-[28px]">key</span>
+        <h2 class="font-display text-[24px] text-on-background font-semibold">Redefinir Senha</h2>
+      </div>
+      <p class="text-on-surface-variant font-body text-[14px] mb-8">Digite sua nova senha abaixo.</p>
+      <form method="POST" class="space-y-6">
+        <div>
+          <label class="block font-body text-[14px] text-on-surface-variant uppercase tracking-widest mb-2">Nova Senha</label>
+          <input type="password" name="senha" required placeholder="Minimo 6 caracteres"
+            class="w-full bg-surface-container border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-3 px-0 transition-colors placeholder:text-outline-variant font-body"/>
+        </div>
+        <div>
+          <label class="block font-body text-[14px] text-on-surface-variant uppercase tracking-widest mb-2">Confirmar Senha</label>
+          <input type="password" name="confirmar" required placeholder="Repita a senha"
+            class="w-full bg-surface-container border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-3 px-0 transition-colors placeholder:text-outline-variant font-body"/>
+        </div>
+        <div class="pt-4">
+          <button type="submit" class="w-full bg-primary text-on-primary py-4 font-body tracking-widest uppercase font-bold hover:bg-primary-container transition-all active:scale-95">
+            Salvar Nova Senha
+          </button>
+        </div>
+      </form>
+    </div>
+    <div class="text-center mt-6">
+      <a href="{{ url_for('login') }}" class="text-on-surface-variant font-body text-[14px] hover:text-primary transition-colors">← Voltar ao login</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

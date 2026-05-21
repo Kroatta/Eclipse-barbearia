@@ -26,13 +26,14 @@
           </button>
         </div>
       </form>
-      <div class="mt-8 pt-6 border-t border-outline-variant/10 text-center">
+      <div class="mt-8 pt-6 border-t border-outline-variant/10 text-center space-y-3">
         <p class="text-on-surface-variant font-body text-[16px]">Não tem conta? <a href="{{ url_for('cadastro') }}" class="text-primary hover:underline font-semibold">Cadastre-se</a></p>
-        <div class="mt-4 text-center">
-          <a href="{{ url_for('admin_login') }}" class="text-on-surface-variant font-body text-[13px] hover:text-primary transition-colors">
-            Acesso administrativo →
-          </a>
-        </div>
+        <a href="{{ url_for('esqueci_senha') }}" class="block text-on-surface-variant font-body text-[13px] hover:text-primary transition-colors">
+          Esqueci minha senha
+        </a>
+        <a href="{{ url_for('admin_login') }}" class="block text-on-surface-variant font-body text-[13px] hover:text-primary transition-colors">
+          Acesso administrativo →
+        </a>
       </div>
     </div>
     <div class="text-center mt-6">
