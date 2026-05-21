@@ -510,7 +510,7 @@ def admin_servico_excluir(id):
 @admin_required
 def admin_barbeiros():
     db = get_db()
-    barbeiros = db.execute("SELECT * FROM barbeiros ORDER BY nome").fetchall()
+    barbeiros = db.execute("SELECT * FROM barbeiros WHERE ativo=1 ORDER BY nome").fetchall()
     db.close()
     return render_template('admin/barbeiros.html', barbeiros=barbeiros)
 
