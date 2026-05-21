@@ -66,6 +66,7 @@ def init_db():
             data_hora TEXT NOT NULL,
             status TEXT DEFAULT 'confirmado',
             observacoes TEXT,
+            nome_avulso TEXT,
             criado_em TEXT DEFAULT (datetime('now','localtime')),
             FOREIGN KEY(usuario_id) REFERENCES usuarios(id),
             FOREIGN KEY(barbeiro_id) REFERENCES barbeiros(id),
@@ -130,8 +131,23 @@ def init_db():
                 VALUES (1, ?, ?, ?, ?)
             """, (random.randint(1,3), random.randint(1,6), random.choice(statuses), data))
 
+    # Migração: adiciona coluna nome_avulso se não existir
+    try:
+        c.execute("ALTER TABLE agendamentos ADD COLUMN nome_avulso TEXT")
+    except Exception:
+        pass
+
     conn.commit()
     conn.close()
+
+# ─── CACHE CONTROL ──────────────────────────────────────────────────────────
+
+@app.after_request
+def no_cache(response):
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 # ─── DECORATORS ─────────────────────────────────────────────────────────────
 
@@ -351,7 +367,8 @@ def admin_dashboard():
     """).fetchone()[0]
     agendamentos_recentes = db.execute("""
         SELECT a.*, s.nome as servico_nome, s.preco,
-               b.nome as barbeiro_nome, u.nome as usuario_nome
+               b.nome as barbeiro_nome,
+               COALESCE(a.nome_avulso, u.nome) as usuario_nome
         FROM agendamentos a
         JOIN servicos s ON a.servico_id=s.id
         JOIN barbeiros b ON a.barbeiro_id=b.id
@@ -457,7 +474,8 @@ def admin_agendamentos():
     db = get_db()
     agendamentos = db.execute("""
         SELECT a.*, s.nome as servico_nome, s.preco,
-               b.nome as barbeiro_nome, u.nome as usuario_nome
+               b.nome as barbeiro_nome,
+               COALESCE(a.nome_avulso, u.nome) as usuario_nome
         FROM agendamentos a
         JOIN servicos s ON a.servico_id=s.id
         JOIN barbeiros b ON a.barbeiro_id=b.id
@@ -485,19 +503,19 @@ def admin_calendario():
 @app.route('/admin/agendamento/novo', methods=['POST'])
 @admin_required
 def admin_agendamento_novo():
-    usuario_id = request.form.get('usuario_id')
+    nome_avulso = request.form.get('nome_avulso', '').strip()
     barbeiro_id = request.form.get('barbeiro_id')
     servico_id = request.form.get('servico_id')
     data_hora = request.form.get('data_hora')
     observacoes = request.form.get('observacoes', '')
-    if not all([usuario_id, barbeiro_id, servico_id, data_hora]):
+    if not all([nome_avulso, barbeiro_id, servico_id, data_hora]):
         flash('Preencha todos os campos obrigatorios.', 'error')
         return redirect(url_for('admin_calendario'))
     db = get_db()
     db.execute("""
-        INSERT INTO agendamentos (usuario_id, barbeiro_id, servico_id, data_hora, observacoes)
-        VALUES (?,?,?,?,?)
-    """, (usuario_id, barbeiro_id, servico_id, data_hora, observacoes))
+        INSERT INTO agendamentos (usuario_id, barbeiro_id, servico_id, data_hora, observacoes, nome_avulso)
+        VALUES (?,?,?,?,?,?)
+    """, (session['user_id'], barbeiro_id, servico_id, data_hora, observacoes, nome_avulso))
     db.commit()
     db.close()
     flash('Agendamento criado com sucesso!', 'success')
@@ -594,7 +612,7 @@ def api_calendario():
         SELECT a.id, a.data_hora, a.status, a.observacoes,
                s.nome as servico_nome, s.duracao,
                b.nome as barbeiro_nome,
-               u.nome as usuario_nome
+               COALESCE(a.nome_avulso, u.nome) as usuario_nome
         FROM agendamentos a
         JOIN servicos s ON a.servico_id = s.id
         JOIN barbeiros b ON a.barbeiro_id = b.id

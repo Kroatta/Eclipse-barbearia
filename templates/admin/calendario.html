@@ -144,14 +144,9 @@
     </div>
     <form method="POST" action="{{ url_for('admin_agendamento_novo') }}" class="space-y-5">
       <div>
-        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Cliente</label>
-        <select name="usuario_id" required
-                class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0">
-          <option value="">Selecione o cliente</option>
-          {% for c in clientes %}
-          <option value="{{ c.id }}">{{ c.nome }} — {{ c.email }}</option>
-          {% endfor %}
-        </select>
+        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Nome do Cliente</label>
+        <input type="text" name="nome_avulso" required placeholder="Ex: João Silva (WhatsApp)"
+               class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0 placeholder:text-outline-variant"/>
       </div>
       <div>
         <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Barbeiro</label>
