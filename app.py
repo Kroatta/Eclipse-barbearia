@@ -530,6 +530,21 @@ def admin_barbeiro_novo():
         flash('Barbeiro adicionado!', 'success')
     return redirect(url_for('admin_barbeiros'))
 
+@app.route('/admin/barbeiros/editar/<int:id>', methods=['POST'])
+@admin_required
+def admin_barbeiro_editar(id):
+    nome = request.form.get('nome', '').strip()
+    especialidade = request.form.get('especialidade', '').strip()
+    bio = request.form.get('bio', '').strip()
+    nivel = request.form.get('nivel', 'Pleno')
+    db = get_db()
+    db.execute("UPDATE barbeiros SET nome=?, especialidade=?, bio=?, nivel=? WHERE id=?",
+               (nome, especialidade, bio, nivel, id))
+    db.commit()
+    db.close()
+    flash('Barbeiro atualizado com sucesso!', 'success')
+    return redirect(url_for('admin_barbeiros'))
+
 @app.route('/admin/barbeiros/excluir/<int:id>')
 @admin_required
 def admin_barbeiro_excluir(id):

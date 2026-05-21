@@ -38,7 +38,8 @@
           </div>
         </div>
         <div class="flex gap-3 mt-3">
-          <button class="text-on-surface-variant hover:text-primary flex items-center gap-1 font-body text-[12px] uppercase tracking-wide transition-colors">
+          <button onclick="abrirEditar({{ b.id }}, '{{ b.nome }}', '{{ b.especialidade }}', '{{ b.bio or '' }}', '{{ b.nivel }}')"
+                  class="text-on-surface-variant hover:text-primary flex items-center gap-1 font-body text-[12px] uppercase tracking-wide transition-colors">
             <span class="material-symbols-outlined text-[16px]">edit</span> Editar
           </button>
           <a href="{{ url_for('admin_barbeiro_excluir', id=b.id) }}"
@@ -51,6 +52,57 @@
     </div>
   </div>
   {% endfor %}
+</div>
+
+<!-- MODAL EDITAR BARBEIRO -->
+<div id="modal-editar" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+  <div class="bg-surface-container-high w-full max-w-2xl border border-outline-variant/30 p-8 shadow-2xl">
+    <div class="flex justify-between items-center mb-8">
+      <div>
+        <h2 class="font-display text-[24px] text-primary">Editar Barbeiro</h2>
+        <p class="font-body text-[13px] text-on-surface-variant uppercase mt-1">Atualizar dados do profissional</p>
+      </div>
+      <button onclick="document.getElementById('modal-editar').classList.add('hidden')"
+        class="material-symbols-outlined text-on-surface-variant hover:text-primary cursor-pointer text-[28px]">close</button>
+    </div>
+    <form id="form-editar" method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label class="block font-body text-[13px] text-on-surface-variant uppercase tracking-widest mb-2">Nome Completo *</label>
+        <input id="edit-nome" type="text" name="nome" required
+          class="w-full bg-surface-container-low border-0 border-b border-outline focus:border-primary focus:ring-0 text-on-surface py-2 px-0 font-body transition-colors"/>
+      </div>
+      <div>
+        <label class="block font-body text-[13px] text-on-surface-variant uppercase tracking-widest mb-2">Cargo / Nível</label>
+        <select id="edit-nivel" name="nivel"
+          class="w-full bg-surface-container-low border-0 border-b border-outline focus:border-primary focus:ring-0 text-on-surface py-2 px-0 font-body appearance-none">
+          <option>Mestre Barbeiro</option>
+          <option>Sênior</option>
+          <option>Pleno</option>
+          <option>Especialista</option>
+        </select>
+      </div>
+      <div>
+        <label class="block font-body text-[13px] text-on-surface-variant uppercase tracking-widest mb-2">Especialidades *</label>
+        <input id="edit-especialidade" type="text" name="especialidade" required
+          class="w-full bg-surface-container-low border-0 border-b border-outline focus:border-primary focus:ring-0 text-on-surface py-2 px-0 font-body"/>
+      </div>
+      <div>
+        <label class="block font-body text-[13px] text-on-surface-variant uppercase tracking-widest mb-2">Biografia Curta</label>
+        <input id="edit-bio" type="text" name="bio"
+          class="w-full bg-surface-container-low border-0 border-b border-outline focus:border-primary focus:ring-0 text-on-surface py-2 px-0 font-body"/>
+      </div>
+      <div class="md:col-span-2 pt-4 flex gap-3 justify-end">
+        <button type="button" onclick="document.getElementById('modal-editar').classList.add('hidden')"
+          class="px-8 py-3 font-body text-[14px] font-bold border border-outline-variant text-on-surface uppercase tracking-widest hover:bg-surface-variant transition-colors">
+          CANCELAR
+        </button>
+        <button type="submit"
+          class="px-8 py-3 font-body text-[14px] font-bold bg-primary text-on-primary uppercase tracking-widest active:scale-95 transition-transform hover:bg-primary-container">
+          SALVAR ALTERAÇÕES
+        </button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <!-- MODAL NOVO BARBEIRO -->
@@ -101,4 +153,17 @@
     </form>
   </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+function abrirEditar(id, nome, especialidade, bio, nivel) {
+  document.getElementById('edit-nome').value = nome;
+  document.getElementById('edit-especialidade').value = especialidade;
+  document.getElementById('edit-bio').value = bio;
+  const sel = document.getElementById('edit-nivel');
+  for (let opt of sel.options) opt.selected = opt.value === nivel;
+  document.getElementById('form-editar').action = '/admin/barbeiros/editar/' + id;
+  document.getElementById('modal-editar').classList.remove('hidden');
+}
+</script>
 {% endblock %}
