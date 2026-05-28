@@ -7,38 +7,96 @@
       <a href="{{ url_for('index') }}" class="font-display text-primary text-[48px] font-bold tracking-tighter uppercase block hover:opacity-80 transition-opacity">ECLIPSE</a>
       <p class="text-on-surface-variant font-body text-[14px] uppercase tracking-[0.3em] mt-2">Barbearia Premium</p>
     </div>
-    <div class="bg-surface-container-low border border-outline-variant/20 p-10">
-      <h2 class="font-display text-[28px] text-on-background mb-8 font-semibold">Entrar na sua conta</h2>
-      <form method="POST" class="space-y-6">
-        <div>
-          <label class="block font-body text-[14px] text-on-surface-variant uppercase tracking-widest mb-2">Email</label>
-          <input type="email" name="email" required placeholder="seu@email.com"
-            class="w-full bg-surface-container border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-3 px-0 transition-colors placeholder:text-outline-variant font-body"/>
+
+    <!-- Tabs -->
+    <div class="flex mb-0 border-b border-outline-variant/30">
+      <button onclick="setTab('cliente')" id="tab-cliente"
+              class="flex-1 py-3 font-body text-[13px] uppercase tracking-widest transition-all border-b-2 border-primary text-primary font-bold">
+        Cliente
+      </button>
+      <button onclick="setTab('profissional')" id="tab-profissional"
+              class="flex-1 py-3 font-body text-[13px] uppercase tracking-widest transition-all border-b-2 border-transparent text-on-surface-variant hover:text-primary">
+        Profissional
+      </button>
+    </div>
+
+    <div class="bg-surface-container-low border border-outline-variant/20 border-t-0 p-10">
+
+      <!-- Painel Cliente -->
+      <div id="painel-cliente">
+        <h2 class="font-display text-[24px] text-on-background mb-6 font-semibold">Área do Cliente</h2>
+        <form method="POST" class="space-y-6">
+          <div>
+            <label class="block font-body text-[14px] text-on-surface-variant uppercase tracking-widest mb-2">Email</label>
+            <input type="email" name="email" required placeholder="seu@email.com"
+              class="w-full bg-surface-container border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-3 px-0 transition-colors placeholder:text-outline-variant font-body"/>
+          </div>
+          <div>
+            <label class="block font-body text-[14px] text-on-surface-variant uppercase tracking-widest mb-2">Senha</label>
+            <input type="password" name="senha" required placeholder="••••••••"
+              class="w-full bg-surface-container border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-3 px-0 transition-colors placeholder:text-outline-variant font-body"/>
+          </div>
+          <div class="pt-4">
+            <button type="submit" class="w-full bg-primary text-on-primary py-4 font-body tracking-widest uppercase font-bold hover:bg-primary-container transition-all active:scale-95">
+              ENTRAR
+            </button>
+          </div>
+        </form>
+        <div class="mt-6 pt-5 border-t border-outline-variant/10 text-center space-y-3">
+          <p class="text-on-surface-variant font-body text-[15px]">Não tem conta? <a href="{{ url_for('cadastro') }}" class="text-primary hover:underline font-semibold">Cadastre-se</a></p>
+          <a href="{{ url_for('esqueci_senha') }}" class="block text-on-surface-variant font-body text-[13px] hover:text-primary transition-colors">
+            Esqueci minha senha
+          </a>
         </div>
-        <div>
-          <label class="block font-body text-[14px] text-on-surface-variant uppercase tracking-widest mb-2">Senha</label>
-          <input type="password" name="senha" required placeholder="••••••••"
-            class="w-full bg-surface-container border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-3 px-0 transition-colors placeholder:text-outline-variant font-body"/>
+      </div>
+
+      <!-- Painel Profissional -->
+      <div id="painel-profissional" class="hidden">
+        <h2 class="font-display text-[24px] text-on-background mb-1 font-semibold">Área do Profissional</h2>
+        <p class="font-body text-[13px] text-on-surface-variant mb-6">Use as credenciais cadastradas pelo administrador.</p>
+        <form method="POST" class="space-y-6">
+          <div>
+            <label class="block font-body text-[14px] text-on-surface-variant uppercase tracking-widest mb-2">Email</label>
+            <input type="email" name="email" required placeholder="seu@eclipse.com"
+              class="w-full bg-surface-container border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-3 px-0 transition-colors placeholder:text-outline-variant font-body"/>
+          </div>
+          <div>
+            <label class="block font-body text-[14px] text-on-surface-variant uppercase tracking-widest mb-2">Senha</label>
+            <input type="password" name="senha" required placeholder="••••••••"
+              class="w-full bg-surface-container border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-3 px-0 transition-colors placeholder:text-outline-variant font-body"/>
+          </div>
+          <div class="pt-4">
+            <button type="submit" class="w-full bg-primary text-on-primary py-4 font-body tracking-widest uppercase font-bold hover:bg-primary-container transition-all active:scale-95">
+              ENTRAR
+            </button>
+          </div>
+        </form>
+        <div class="mt-6 pt-5 border-t border-outline-variant/10 text-center">
+          <p class="text-on-surface-variant font-body text-[13px]">Problemas de acesso? Fale com o administrador.</p>
         </div>
-        <div class="pt-4">
-          <button type="submit" class="w-full bg-primary text-on-primary py-4 font-body tracking-widest uppercase font-bold hover:bg-primary-container transition-all active:scale-95">
-            ENTRAR
-          </button>
-        </div>
-      </form>
-      <div class="mt-8 pt-6 border-t border-outline-variant/10 text-center space-y-3">
-        <p class="text-on-surface-variant font-body text-[16px]">Não tem conta? <a href="{{ url_for('cadastro') }}" class="text-primary hover:underline font-semibold">Cadastre-se</a></p>
-        <a href="{{ url_for('esqueci_senha') }}" class="block text-on-surface-variant font-body text-[13px] hover:text-primary transition-colors">
-          Esqueci minha senha
-        </a>
-        <a href="{{ url_for('admin_login') }}" class="block text-on-surface-variant font-body text-[13px] hover:text-primary transition-colors">
+      </div>
+
+      <!-- Acesso administrativo -->
+      <div class="mt-6 pt-4 border-t border-outline-variant/10 text-center">
+        <a href="{{ url_for('admin_login') }}" class="text-on-surface-variant font-body text-[12px] hover:text-primary transition-colors uppercase tracking-widest">
           Acesso administrativo →
         </a>
       </div>
     </div>
+
     <div class="text-center mt-6">
       <a href="{{ url_for('index') }}" class="text-on-surface-variant font-body text-[14px] hover:text-primary transition-colors">← Voltar ao site</a>
     </div>
   </div>
 </div>
+
+<script>
+function setTab(tab) {
+  const isCliente = tab === 'cliente';
+  document.getElementById('painel-cliente').classList.toggle('hidden', !isCliente);
+  document.getElementById('painel-profissional').classList.toggle('hidden', isCliente);
+  document.getElementById('tab-cliente').className = `flex-1 py-3 font-body text-[13px] uppercase tracking-widest transition-all border-b-2 ${isCliente ? 'border-primary text-primary font-bold' : 'border-transparent text-on-surface-variant hover:text-primary'}`;
+  document.getElementById('tab-profissional').className = `flex-1 py-3 font-body text-[13px] uppercase tracking-widest transition-all border-b-2 ${!isCliente ? 'border-primary text-primary font-bold' : 'border-transparent text-on-surface-variant hover:text-primary'}`;
+}
+</script>
 {% endblock %}

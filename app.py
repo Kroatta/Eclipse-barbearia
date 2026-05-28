@@ -567,6 +567,23 @@ def funcionario_pegar_produto(produto_id):
     flash(f'{quantidade} {produto["unidade"]} de "{produto["nome"]}" retirado do estoque.', 'success')
     return redirect(url_for('funcionario_estoque'))
 
+@app.route('/funcionario/agendamento/concluir/<int:id>', methods=['POST'])
+@funcionario_required
+def funcionario_concluir_agendamento(id):
+    db = get_db()
+    barbeiro = db.execute("SELECT * FROM barbeiros WHERE usuario_id=?", (session['user_id'],)).fetchone()
+    if barbeiro:
+        ag = db.execute("SELECT * FROM agendamentos WHERE id=? AND barbeiro_id=? AND status='confirmado'",
+                        (id, barbeiro['id'])).fetchone()
+        if ag:
+            db.execute("UPDATE agendamentos SET status='concluido' WHERE id=?", (id,))
+            db.commit()
+            flash('Agendamento marcado como concluido!', 'success')
+        else:
+            flash('Agendamento nao encontrado ou ja finalizado.', 'error')
+    db.close()
+    return redirect(url_for('funcionario_agenda'))
+
 # ─── ROTAS ADMIN ─────────────────────────────────────────────────────────────
 
 @app.route('/admin')
@@ -654,7 +671,13 @@ def admin_servico_excluir(id):
 @admin_required
 def admin_barbeiros():
     db = get_db()
-    barbeiros = db.execute("SELECT * FROM barbeiros WHERE ativo=1 ORDER BY nome").fetchall()
+    barbeiros = db.execute("""
+        SELECT b.*, u.email as func_email, u.id as func_id
+        FROM barbeiros b
+        LEFT JOIN usuarios u ON u.id = b.usuario_id AND u.is_funcionario = 1
+        WHERE b.ativo = 1
+        ORDER BY b.nome
+    """).fetchall()
     db.close()
     return render_template('admin/barbeiros.html', barbeiros=barbeiros)
 
@@ -689,6 +712,32 @@ def admin_barbeiro_editar(id):
     flash('Barbeiro atualizado com sucesso!', 'success')
     return redirect(url_for('admin_barbeiros'))
 
+@app.route('/admin/barbeiros/dar-acesso/<int:id>', methods=['POST'])
+@admin_required
+def admin_barbeiro_dar_acesso(id):
+    email = request.form.get('email', '').strip()
+    senha = request.form.get('senha', '')
+    if not email or not senha:
+        flash('Email e senha sao obrigatorios.', 'error')
+        return redirect(url_for('admin_barbeiros'))
+    db = get_db()
+    barbeiro = db.execute("SELECT * FROM barbeiros WHERE id=?", (id,)).fetchone()
+    if not barbeiro:
+        db.close()
+        flash('Barbeiro nao encontrado.', 'error')
+        return redirect(url_for('admin_barbeiros'))
+    if db.execute("SELECT id FROM usuarios WHERE email=?", (email,)).fetchone():
+        db.close()
+        flash('Email ja cadastrado.', 'error')
+        return redirect(url_for('admin_barbeiros'))
+    cursor = db.execute("INSERT INTO usuarios (nome, email, senha, is_funcionario) VALUES (?,?,?,1)",
+                        (barbeiro['nome'], email, generate_password_hash(senha)))
+    db.execute("UPDATE barbeiros SET usuario_id=? WHERE id=?", (cursor.lastrowid, id))
+    db.commit()
+    db.close()
+    flash(f'Acesso criado para {barbeiro["nome"]}!', 'success')
+    return redirect(url_for('admin_barbeiros'))
+
 @app.route('/admin/barbeiros/excluir/<int:id>')
 @admin_required
 def admin_barbeiro_excluir(id):
@@ -703,7 +752,20 @@ def admin_barbeiro_excluir(id):
 @admin_required
 def admin_agendamentos():
     db = get_db()
-    agendamentos = db.execute("""
+    status_f    = request.args.get('status', '')
+    barbeiro_f  = request.args.get('barbeiro_id', '')
+    data_de     = request.args.get('data_de', '')
+    data_ate    = request.args.get('data_ate', '')
+    where, params = ['1=1'], []
+    if status_f:
+        where.append('a.status=?'); params.append(status_f)
+    if barbeiro_f:
+        where.append('a.barbeiro_id=?'); params.append(barbeiro_f)
+    if data_de:
+        where.append("date(a.data_hora)>=?"); params.append(data_de)
+    if data_ate:
+        where.append("date(a.data_hora)<=?"); params.append(data_ate)
+    agendamentos = db.execute(f"""
         SELECT a.*, s.nome as servico_nome, s.preco,
                b.nome as barbeiro_nome,
                COALESCE(a.nome_avulso, u.nome) as usuario_nome
@@ -711,10 +773,14 @@ def admin_agendamentos():
         JOIN servicos s ON a.servico_id=s.id
         JOIN barbeiros b ON a.barbeiro_id=b.id
         JOIN usuarios u ON a.usuario_id=u.id
+        WHERE {' AND '.join(where)}
         ORDER BY a.data_hora DESC
-    """).fetchall()
+    """, params).fetchall()
+    barbeiros = db.execute("SELECT * FROM barbeiros WHERE ativo=1 ORDER BY nome").fetchall()
     db.close()
-    return render_template('admin/agendamentos.html', agendamentos=agendamentos)
+    return render_template('admin/agendamentos.html', agendamentos=agendamentos,
+                           barbeiros=barbeiros, status_f=status_f, barbeiro_f=barbeiro_f,
+                           data_de=data_de, data_ate=data_ate)
 
 @app.route('/admin/estoque')
 @admin_required
@@ -1060,6 +1126,40 @@ def api_barbeiros_ranking():
     """).fetchall()
     db.close()
     return jsonify([dict(r) for r in dados])
+
+@app.route('/admin/relatorio')
+@admin_required
+def admin_relatorio():
+    db = get_db()
+    total_ag    = db.execute("SELECT COUNT(*) FROM agendamentos").fetchone()[0]
+    concluidos  = db.execute("SELECT COUNT(*) FROM agendamentos WHERE status='concluido'").fetchone()[0]
+    cancelados  = db.execute("SELECT COUNT(*) FROM agendamentos WHERE status='cancelado'").fetchone()[0]
+    receita     = db.execute("SELECT COALESCE(SUM(s.preco),0) FROM agendamentos a JOIN servicos s ON a.servico_id=s.id WHERE a.status IN ('confirmado','concluido')").fetchone()[0]
+    clientes    = db.execute("SELECT COUNT(*) FROM usuarios WHERE is_admin=0 AND is_funcionario=0").fetchone()[0]
+    barbeiros   = db.execute("SELECT COUNT(*) FROM barbeiros WHERE ativo=1").fetchone()[0]
+    servicos_pop = db.execute("""
+        SELECT s.nome, COUNT(*) as total, SUM(s.preco) as receita
+        FROM agendamentos a JOIN servicos s ON a.servico_id=s.id
+        WHERE a.status!='cancelado' GROUP BY s.id ORDER BY total DESC LIMIT 10
+    """).fetchall()
+    barbeiros_rank = db.execute("""
+        SELECT b.nome, COUNT(*) as total, SUM(s.preco) as receita
+        FROM agendamentos a JOIN barbeiros b ON a.barbeiro_id=b.id JOIN servicos s ON a.servico_id=s.id
+        WHERE a.status!='cancelado' GROUP BY b.id ORDER BY total DESC
+    """).fetchall()
+    produtos_uso = db.execute("""
+        SELECT b.nome as barbeiro, p.nome as produto, SUM(up.quantidade) as total, p.unidade
+        FROM uso_produtos up JOIN usuarios u ON up.usuario_id=u.id
+        JOIN barbeiros b ON b.usuario_id=u.id JOIN produtos p ON up.produto_id=p.id
+        GROUP BY b.id, p.id ORDER BY b.nome, total DESC
+    """).fetchall()
+    from datetime import date
+    db.close()
+    return render_template('admin/relatorio.html',
+        total_ag=total_ag, concluidos=concluidos, cancelados=cancelados,
+        receita=receita, clientes=clientes, barbeiros=barbeiros,
+        servicos_pop=servicos_pop, barbeiros_rank=barbeiros_rank,
+        produtos_uso=produtos_uso, hoje=date.today().strftime('%d/%m/%Y'))
 
 @app.route('/api/graficos/produtos-barbeiros')
 @admin_required

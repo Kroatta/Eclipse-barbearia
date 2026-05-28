@@ -1,0 +1,150 @@
+{% extends "admin/base_admin.html" %}
+{% block admin_title %}Relatório{% endblock %}
+{% block admin_content %}
+
+<div class="flex items-end justify-between mb-8 no-print">
+  <div>
+    <span class="text-primary font-body text-[12px] uppercase tracking-[0.3em] block mb-2">Administração</span>
+    <h1 class="font-display text-[32px] text-on-background font-semibold">Relatório Geral</h1>
+    <p class="text-on-surface-variant font-body mt-1">Gerado em {{ hoje }}</p>
+  </div>
+  <button onclick="window.print()"
+          class="bg-primary text-on-primary px-6 py-3 font-body text-[13px] uppercase tracking-widest font-bold hover:bg-primary-container transition-all flex items-center gap-2">
+    <span class="material-symbols-outlined text-[18px]">print</span> Imprimir / Salvar PDF
+  </button>
+</div>
+
+<!-- Cabeçalho do relatório (só aparece no print) -->
+<div class="print-header hidden">
+  <h1 style="font-size:28px;font-weight:bold;color:#f2ca50;margin-bottom:4px;">ECLIPSE — Barbearia Premium</h1>
+  <p style="color:#888;font-size:13px;">Relatório Geral — Gerado em {{ hoje }}</p>
+  <hr style="border-color:#333;margin:16px 0;">
+</div>
+
+<!-- KPIs -->
+<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+  <div class="bg-surface-container border border-outline-variant/20 p-5">
+    <p class="font-body text-[11px] text-on-surface-variant uppercase tracking-widest mb-1">Total Agendamentos</p>
+    <p class="font-display text-[32px] text-primary font-bold">{{ total_ag }}</p>
+  </div>
+  <div class="bg-surface-container border border-outline-variant/20 p-5">
+    <p class="font-body text-[11px] text-on-surface-variant uppercase tracking-widest mb-1">Concluídos</p>
+    <p class="font-display text-[32px] text-primary font-bold">{{ concluidos }}</p>
+  </div>
+  <div class="bg-surface-container border border-outline-variant/20 p-5">
+    <p class="font-body text-[11px] text-on-surface-variant uppercase tracking-widest mb-1">Cancelados</p>
+    <p class="font-display text-[32px] text-error font-bold">{{ cancelados }}</p>
+  </div>
+  <div class="bg-surface-container border border-outline-variant/20 p-5">
+    <p class="font-body text-[11px] text-on-surface-variant uppercase tracking-widest mb-1">Clientes Cadastrados</p>
+    <p class="font-display text-[32px] text-primary font-bold">{{ clientes }}</p>
+  </div>
+  <div class="bg-surface-container border border-outline-variant/20 p-5">
+    <p class="font-body text-[11px] text-on-surface-variant uppercase tracking-widest mb-1">Barbeiros Ativos</p>
+    <p class="font-display text-[32px] text-primary font-bold">{{ barbeiros }}</p>
+  </div>
+  <div class="bg-surface-container-high border-2 border-primary p-5">
+    <p class="font-body text-[11px] text-primary uppercase tracking-widest font-bold mb-1">Receita Total</p>
+    <p class="font-display text-[28px] text-on-background font-bold">R$ {{ "%.2f"|format(receita) }}</p>
+  </div>
+</div>
+
+<!-- Serviços mais pedidos -->
+<div class="mb-8">
+  <h2 class="font-display text-[22px] text-on-background font-semibold mb-4">Serviços mais Pedidos</h2>
+  <div class="bg-surface-container-low border border-outline-variant/20 overflow-hidden">
+    <table class="w-full">
+      <thead class="bg-surface-container">
+        <tr class="border-b border-outline-variant/20">
+          <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-left px-6 py-3">#</th>
+          <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-left px-6 py-3">Serviço</th>
+          <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-center px-6 py-3">Qtd</th>
+          <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-right px-6 py-3">Receita</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-outline-variant/10">
+        {% for s in servicos_pop %}
+        <tr>
+          <td class="px-6 py-3 font-body text-[13px] text-primary font-bold">{{ loop.index }}º</td>
+          <td class="px-6 py-3 font-body text-[14px] text-on-background font-semibold">{{ s.nome }}</td>
+          <td class="px-6 py-3 text-center font-body text-[14px] text-on-background font-bold">{{ s.total }}</td>
+          <td class="px-6 py-3 text-right font-body text-[14px] text-primary font-bold">R$ {{ "%.2f"|format(s.receita or 0) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Ranking barbeiros -->
+<div class="mb-8">
+  <h2 class="font-display text-[22px] text-on-background font-semibold mb-4">Ranking de Barbeiros</h2>
+  <div class="bg-surface-container-low border border-outline-variant/20 overflow-hidden">
+    <table class="w-full">
+      <thead class="bg-surface-container">
+        <tr class="border-b border-outline-variant/20">
+          <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-left px-6 py-3">#</th>
+          <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-left px-6 py-3">Barbeiro</th>
+          <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-center px-6 py-3">Atendimentos</th>
+          <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-right px-6 py-3">Receita Gerada</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-outline-variant/10">
+        {% for b in barbeiros_rank %}
+        <tr>
+          <td class="px-6 py-3 font-body text-[13px] text-primary font-bold">{{ loop.index }}º</td>
+          <td class="px-6 py-3 font-body text-[14px] text-on-background font-semibold">{{ b.nome }}</td>
+          <td class="px-6 py-3 text-center font-body text-[14px] text-on-background font-bold">{{ b.total }}</td>
+          <td class="px-6 py-3 text-right font-body text-[14px] text-primary font-bold">R$ {{ "%.2f"|format(b.receita or 0) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Uso de produtos -->
+{% if produtos_uso %}
+<div class="mb-8">
+  <h2 class="font-display text-[22px] text-on-background font-semibold mb-4">Consumo de Produtos por Barbeiro</h2>
+  <div class="bg-surface-container-low border border-outline-variant/20 overflow-hidden">
+    <table class="w-full">
+      <thead class="bg-surface-container">
+        <tr class="border-b border-outline-variant/20">
+          <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-left px-6 py-3">Barbeiro</th>
+          <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-left px-6 py-3">Produto</th>
+          <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-center px-6 py-3">Total Retirado</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-outline-variant/10">
+        {% for p in produtos_uso %}
+        <tr>
+          <td class="px-6 py-3 font-body text-[14px] text-primary font-semibold">{{ p.barbeiro }}</td>
+          <td class="px-6 py-3 font-body text-[14px] text-on-background">{{ p.produto }}</td>
+          <td class="px-6 py-3 text-center font-body text-[14px] text-on-background font-bold">{{ p.total }} {{ p.unidade }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<style>
+@media print {
+  .no-print { display: none !important; }
+  .print-header { display: block !important; }
+  aside, header { display: none !important; }
+  .ml-64 { margin-left: 0 !important; }
+  .mt-16 { margin-top: 0 !important; }
+  body { background: white !important; color: black !important; }
+  .bg-surface-container, .bg-surface-container-low, .bg-surface-container-high { background: #f9f9f9 !important; }
+  .text-primary { color: #b8860b !important; }
+  .text-on-background, .text-on-surface { color: #111 !important; }
+  .text-on-surface-variant { color: #555 !important; }
+  .border, .border-outline-variant\/20, .border-b { border-color: #ddd !important; }
+  .text-error { color: #c00 !important; }
+  table { page-break-inside: avoid; }
+}
+</style>
+{% endblock %}

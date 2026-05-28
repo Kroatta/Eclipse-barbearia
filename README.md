@@ -56,9 +56,21 @@ http://localhost:5000
 - **Senha**: `admin123`
 
 ### Cliente (para testar)
-- **URL de Login**: `http://localhost:5000/login`
+- **URL de Login**: `http://localhost:5000/login` → aba **Cliente**
 - **Email**: `cliente@eclipse.com`
 - **Senha**: `cliente123`
+
+### Funcionários / Barbeiros (criados automaticamente ao iniciar)
+- **URL de Login**: `http://localhost:5000/login` → aba **Profissional**
+
+| Nome          | Email                        | Senha    |
+|---------------|------------------------------|----------|
+| Ricardo Silva | ricardo.func@eclipse.com     | func123  |
+| Fabio Mendes  | fabio.func@eclipse.com       | func123  |
+| Lucas Santos  | lucas.func@eclipse.com       | func123  |
+
+> Para criar novos funcionários: Admin → Funcionários → Novo Funcionário  
+> Para dar acesso a um barbeiro já existente: Admin → Barbeiros → botão **Dar Acesso**
 
 ---
 

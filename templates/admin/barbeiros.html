@@ -37,7 +37,18 @@
             {% endfor %}
           </div>
         </div>
-        <div class="flex gap-3 mt-3">
+        {% if b.func_id %}
+        <div class="mt-2 flex items-center gap-1">
+          <span class="material-symbols-outlined text-green-400 text-[14px]">verified</span>
+          <span class="font-body text-[11px] text-green-400 uppercase tracking-widest">Tem acesso</span>
+        </div>
+        {% else %}
+        <button onclick="abrirDarAcesso({{ b.id }}, '{{ b.nome }}')"
+                class="mt-2 text-on-surface-variant hover:text-primary flex items-center gap-1 font-body text-[11px] uppercase tracking-wide transition-colors">
+          <span class="material-symbols-outlined text-[14px]">key</span> Dar acesso
+        </button>
+        {% endif %}
+        <div class="flex gap-3 mt-2">
           <button onclick="abrirEditar({{ b.id }}, '{{ b.nome }}', '{{ b.especialidade }}', '{{ b.bio or '' }}', '{{ b.nivel }}')"
                   class="text-on-surface-variant hover:text-primary flex items-center gap-1 font-body text-[12px] uppercase tracking-wide transition-colors">
             <span class="material-symbols-outlined text-[16px]">edit</span> Editar
@@ -153,9 +164,43 @@
     </form>
   </div>
 </div>
+<!-- Modal Dar Acesso -->
+<div id="modal-acesso" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+  <div class="bg-surface-container-high w-full max-w-md border border-outline-variant/30 p-8 shadow-2xl">
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h2 class="font-display text-[22px] text-primary">Dar Acesso ao Sistema</h2>
+        <p id="acesso-nome" class="font-body text-[13px] text-on-surface-variant mt-1"></p>
+      </div>
+      <button onclick="document.getElementById('modal-acesso').classList.add('hidden')"
+        class="material-symbols-outlined text-on-surface-variant hover:text-primary cursor-pointer text-[28px]">close</button>
+    </div>
+    <form id="form-acesso" method="POST" class="space-y-4">
+      <div>
+        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Email de Login *</label>
+        <input type="email" name="email" required placeholder="email@exemplo.com"
+               class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0 placeholder:text-outline-variant"/>
+      </div>
+      <div>
+        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Senha *</label>
+        <input type="password" name="senha" required placeholder="Mínimo 6 caracteres"
+               class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0 placeholder:text-outline-variant"/>
+      </div>
+      <button type="submit" class="w-full bg-primary text-on-primary py-3 font-body uppercase tracking-widest font-bold hover:bg-primary-container transition-all mt-2">
+        Criar Acesso
+      </button>
+    </form>
+  </div>
+</div>
+
 {% endblock %}
 {% block scripts %}
 <script>
+function abrirDarAcesso(id, nome) {
+  document.getElementById('acesso-nome').textContent = nome;
+  document.getElementById('form-acesso').action = '/admin/barbeiros/dar-acesso/' + id;
+  document.getElementById('modal-acesso').classList.remove('hidden');
+}
 function abrirEditar(id, nome, especialidade, bio, nivel) {
   document.getElementById('edit-nome').value = nome;
   document.getElementById('edit-especialidade').value = especialidade;
