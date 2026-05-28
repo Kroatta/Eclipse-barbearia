@@ -731,15 +731,14 @@ def admin_estoque_excluir(id):
 def admin_funcionarios():
     db = get_db()
     funcionarios = db.execute("""
-        SELECT u.*, b.nome as barbeiro_nome, b.id as barbeiro_id
+        SELECT u.id, u.nome, u.email, b.especialidade
         FROM usuarios u
         LEFT JOIN barbeiros b ON b.usuario_id = u.id
         WHERE u.is_funcionario = 1
         ORDER BY u.nome
     """).fetchall()
-    barbeiros = db.execute("SELECT * FROM barbeiros WHERE ativo=1 ORDER BY nome").fetchall()
     db.close()
-    return render_template('admin/funcionarios.html', funcionarios=funcionarios, barbeiros=barbeiros)
+    return render_template('admin/funcionarios.html', funcionarios=funcionarios)
 
 @app.route('/admin/funcionarios/novo', methods=['POST'])
 @admin_required
@@ -747,8 +746,7 @@ def admin_funcionario_novo():
     nome = request.form.get('nome', '').strip()
     email = request.form.get('email', '').strip()
     senha = request.form.get('senha', '')
-    telefone = request.form.get('telefone', '').strip()
-    barbeiro_id = request.form.get('barbeiro_id')
+    especialidade = request.form.get('especialidade', '').strip()
     if not all([nome, email, senha]):
         flash('Preencha todos os campos obrigatorios.', 'error')
         return redirect(url_for('admin_funcionarios'))
@@ -757,11 +755,11 @@ def admin_funcionario_novo():
         db.close()
         flash('Email ja cadastrado.', 'error')
         return redirect(url_for('admin_funcionarios'))
-    cursor = db.execute("INSERT INTO usuarios (nome, email, senha, telefone, is_funcionario) VALUES (?,?,?,?,1)",
-                        (nome, email, generate_password_hash(senha), telefone))
+    cursor = db.execute("INSERT INTO usuarios (nome, email, senha, is_funcionario) VALUES (?,?,?,1)",
+                        (nome, email, generate_password_hash(senha)))
     novo_id = cursor.lastrowid
-    if barbeiro_id:
-        db.execute("UPDATE barbeiros SET usuario_id=? WHERE id=?", (novo_id, barbeiro_id))
+    db.execute("INSERT INTO barbeiros (nome, especialidade, usuario_id) VALUES (?,?,?)",
+               (nome, especialidade, novo_id))
     db.commit()
     db.close()
     flash(f'Funcionario {nome} criado com sucesso!', 'success')
@@ -773,7 +771,7 @@ def admin_funcionario_editar(id):
     nome = request.form.get('nome', '').strip()
     email = request.form.get('email', '').strip()
     senha = request.form.get('senha', '')
-    barbeiro_id = request.form.get('barbeiro_id')
+    especialidade = request.form.get('especialidade', '').strip()
     if not all([nome, email]):
         flash('Nome e email sao obrigatorios.', 'error')
         return redirect(url_for('admin_funcionarios'))
@@ -789,9 +787,8 @@ def admin_funcionario_editar(id):
     else:
         db.execute("UPDATE usuarios SET nome=?, email=? WHERE id=? AND is_funcionario=1",
                    (nome, email, id))
-    db.execute("UPDATE barbeiros SET usuario_id=NULL WHERE usuario_id=?", (id,))
-    if barbeiro_id:
-        db.execute("UPDATE barbeiros SET usuario_id=? WHERE id=?", (id, barbeiro_id))
+    db.execute("UPDATE barbeiros SET nome=?, especialidade=? WHERE usuario_id=?",
+               (nome, especialidade, id))
     db.commit()
     db.close()
     flash('Funcionario atualizado.', 'success')
@@ -801,7 +798,7 @@ def admin_funcionario_editar(id):
 @admin_required
 def admin_funcionario_excluir(id):
     db = get_db()
-    db.execute("UPDATE barbeiros SET usuario_id=NULL WHERE usuario_id=?", (id,))
+    db.execute("UPDATE barbeiros SET ativo=0, usuario_id=NULL WHERE usuario_id=?", (id,))
     db.execute("DELETE FROM usuarios WHERE id=? AND is_funcionario=1", (id,))
     db.commit()
     db.close()

@@ -28,7 +28,7 @@
       <tr class="border-b border-outline-variant/20">
         <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-left px-6 py-4">Nome</th>
         <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-left px-6 py-4">Email</th>
-        <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-center px-6 py-4">Barbeiro Vinculado</th>
+        <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-left px-6 py-4">Especialidade</th>
         <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-center px-6 py-4">Ações</th>
       </tr>
     </thead>
@@ -37,23 +37,15 @@
       <tr class="hover:bg-surface-container/50 transition-colors">
         <td class="px-6 py-4 font-body text-[14px] text-on-background font-semibold">{{ f.nome }}</td>
         <td class="px-6 py-4 font-body text-[13px] text-on-surface-variant">{{ f.email }}</td>
-        <td class="px-6 py-4 text-center">
-          {% if f.barbeiro_nome %}
-          <span class="px-2 py-1 text-[11px] font-body uppercase tracking-widest bg-primary/10 text-primary border border-primary/30">
-            {{ f.barbeiro_nome }}
-          </span>
-          {% else %}
-          <span class="text-on-surface-variant font-body text-[13px]">—</span>
-          {% endif %}
-        </td>
+        <td class="px-6 py-4 font-body text-[13px] text-on-surface-variant">{{ f.especialidade or '—' }}</td>
         <td class="px-6 py-4 text-center">
           <div class="flex justify-center gap-2">
-            <button onclick="abrirEditar({{ f.id }}, '{{ f.nome }}', '{{ f.email }}', {{ f.barbeiro_id or 'null' }})"
+            <button onclick="abrirEditar({{ f.id }}, '{{ f.nome }}', '{{ f.email }}', '{{ f.especialidade or '' }}')"
                     class="text-primary border border-primary/30 hover:bg-primary/10 px-3 py-1 font-body text-[11px] uppercase tracking-widest transition-colors">
               Editar
             </button>
             <a href="{{ url_for('admin_funcionario_excluir', id=f.id) }}"
-               onclick="return confirm('Remover acesso de {{ f.nome }}?')"
+               onclick="return confirm('Remover acesso de {{ f.nome }}? O perfil de barbeiro dele será desativado.')"
                class="text-error border border-error/30 hover:bg-error/10 px-3 py-1 font-body text-[11px] uppercase tracking-widest transition-colors">
               Remover
             </a>
@@ -81,6 +73,7 @@
         <span class="material-symbols-outlined">close</span>
       </button>
     </div>
+    <p class="font-body text-[12px] text-on-surface-variant mb-5">Cria a conta de login e o perfil de barbeiro automaticamente.</p>
     <form method="POST" action="{{ url_for('admin_funcionario_novo') }}" class="space-y-4">
       <div>
         <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Nome *</label>
@@ -98,16 +91,12 @@
                class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0 placeholder:text-outline-variant"/>
       </div>
       <div>
-        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Vincular ao Barbeiro</label>
-        <select name="barbeiro_id" class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0">
-          <option value="">— Sem vínculo —</option>
-          {% for b in barbeiros %}
-          <option value="{{ b.id }}">{{ b.nome }}</option>
-          {% endfor %}
-        </select>
+        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Especialidade</label>
+        <input type="text" name="especialidade" placeholder="Ex: Degradê, Barba, Coloração..."
+               class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0 placeholder:text-outline-variant"/>
       </div>
       <button type="submit" class="w-full bg-primary text-on-primary py-3 font-body uppercase tracking-widest font-bold hover:bg-primary-container transition-all mt-2">
-        Criar Conta
+        Criar Funcionário
       </button>
     </form>
   </div>
@@ -140,13 +129,9 @@
                class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0 placeholder:text-outline-variant"/>
       </div>
       <div>
-        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Barbeiro Vinculado</label>
-        <select id="e-barbeiro" name="barbeiro_id" class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0">
-          <option value="">— Sem vínculo —</option>
-          {% for b in barbeiros %}
-          <option value="{{ b.id }}">{{ b.nome }}</option>
-          {% endfor %}
-        </select>
+        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Especialidade</label>
+        <input id="e-esp" type="text" name="especialidade" placeholder="Ex: Degradê, Barba..."
+               class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0 placeholder:text-outline-variant"/>
       </div>
       <button type="submit" class="w-full bg-primary text-on-primary py-3 font-body uppercase tracking-widest font-bold hover:bg-primary-container transition-all mt-2">
         Salvar Alterações
@@ -158,13 +143,10 @@
 {% endblock %}
 {% block scripts %}
 <script>
-function abrirEditar(id, nome, email, barbeiroId) {
+function abrirEditar(id, nome, email, esp) {
   document.getElementById('e-nome').value = nome;
   document.getElementById('e-email').value = email;
-  const sel = document.getElementById('e-barbeiro');
-  for (let o of sel.options) {
-    o.selected = (barbeiroId !== null && parseInt(o.value) === barbeiroId);
-  }
+  document.getElementById('e-esp').value = esp;
   document.getElementById('form-editar').action = '/admin/funcionarios/editar/' + id;
   document.getElementById('modal-editar').classList.remove('hidden');
 }
