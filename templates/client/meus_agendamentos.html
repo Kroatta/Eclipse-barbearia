@@ -68,7 +68,7 @@
           </div>
         </div>
 
-        {% if a.data_hora < agora and a.status != 'cancelado' %}
+        {% if a.status == 'concluido' %}
           {% if a.id in avaliados_map %}
           <div class="mt-4 pt-4 border-t border-outline-variant/10 flex items-center gap-2">
             <span class="text-[12px] text-on-surface-variant font-body uppercase tracking-widest">Sua avaliacao:</span>

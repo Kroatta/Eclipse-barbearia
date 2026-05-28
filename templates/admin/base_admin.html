@@ -45,6 +45,24 @@
         <span class="material-symbols-outlined {% if request.endpoint == 'admin_calendario' %}fill-icon{% endif %}">calendar_month</span>
         <span class="text-[14px] tracking-wider uppercase">Calendário</span>
       </a>
+      <a href="{{ url_for('admin_estoque') }}"
+         class="flex items-center gap-3 px-4 py-3 font-body font-medium transition-all rounded
+         {% if 'estoque' in request.endpoint %}text-primary font-bold border-l-4 border-primary bg-surface-container-high{% else %}text-on-surface-variant hover:text-on-surface hover:bg-surface-variant{% endif %}">
+        <span class="material-symbols-outlined {% if 'estoque' in request.endpoint %}fill-icon{% endif %}">inventory_2</span>
+        <span class="text-[14px] tracking-wider uppercase">Estoque</span>
+      </a>
+      <a href="{{ url_for('admin_funcionarios') }}"
+         class="flex items-center gap-3 px-4 py-3 font-body font-medium transition-all rounded
+         {% if 'funcionario' in request.endpoint %}text-primary font-bold border-l-4 border-primary bg-surface-container-high{% else %}text-on-surface-variant hover:text-on-surface hover:bg-surface-variant{% endif %}">
+        <span class="material-symbols-outlined {% if 'funcionario' in request.endpoint %}fill-icon{% endif %}">badge</span>
+        <span class="text-[14px] tracking-wider uppercase">Funcionários</span>
+      </a>
+      <a href="{{ url_for('admin_profissionais_dash') }}"
+         class="flex items-center gap-3 px-4 py-3 font-body font-medium transition-all rounded
+         {% if request.endpoint == 'admin_profissionais_dash' %}text-primary font-bold border-l-4 border-primary bg-surface-container-high{% else %}text-on-surface-variant hover:text-on-surface hover:bg-surface-variant{% endif %}">
+        <span class="material-symbols-outlined {% if request.endpoint == 'admin_profissionais_dash' %}fill-icon{% endif %}">analytics</span>
+        <span class="text-[14px] tracking-wider uppercase">Profissionais</span>
+      </a>
     </nav>
     <div class="p-4 border-t border-outline-variant/20">
       <a href="{{ url_for('index') }}" class="flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors px-4 py-2">

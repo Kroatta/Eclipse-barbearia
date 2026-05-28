@@ -1,0 +1,172 @@
+{% extends "admin/base_admin.html" %}
+{% block admin_title %}Funcionários{% endblock %}
+{% block admin_content %}
+
+<div class="flex justify-between items-center mb-8">
+  <div>
+    <span class="text-primary font-body text-[12px] uppercase tracking-[0.3em] block mb-2">Administração</span>
+    <h1 class="font-display text-[32px] text-on-background font-semibold">Funcionários</h1>
+  </div>
+  <button onclick="document.getElementById('modal-novo').classList.remove('hidden')"
+          class="bg-primary text-on-primary px-6 py-3 font-body text-[13px] uppercase tracking-widest font-bold hover:bg-primary-container transition-all active:scale-95 flex items-center gap-2">
+    <span class="material-symbols-outlined text-[18px]">person_add</span> Novo Funcionário
+  </button>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+  <div class="mb-4 px-4 py-3 border font-body text-[13px]
+    {% if cat == 'error' %}border-error/40 text-error bg-error/10{% else %}border-green-500/30 text-green-400 bg-green-500/10{% endif %}">
+    {{ msg }}
+  </div>
+  {% endfor %}
+{% endwith %}
+
+<div class="bg-surface-container-low border border-outline-variant/20 overflow-hidden">
+  <table class="w-full">
+    <thead class="bg-surface-container">
+      <tr class="border-b border-outline-variant/20">
+        <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-left px-6 py-4">Nome</th>
+        <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-left px-6 py-4">Email</th>
+        <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-center px-6 py-4">Barbeiro Vinculado</th>
+        <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-center px-6 py-4">Ações</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-outline-variant/10">
+      {% for f in funcionarios %}
+      <tr class="hover:bg-surface-container/50 transition-colors">
+        <td class="px-6 py-4 font-body text-[14px] text-on-background font-semibold">{{ f.nome }}</td>
+        <td class="px-6 py-4 font-body text-[13px] text-on-surface-variant">{{ f.email }}</td>
+        <td class="px-6 py-4 text-center">
+          {% if f.barbeiro_nome %}
+          <span class="px-2 py-1 text-[11px] font-body uppercase tracking-widest bg-primary/10 text-primary border border-primary/30">
+            {{ f.barbeiro_nome }}
+          </span>
+          {% else %}
+          <span class="text-on-surface-variant font-body text-[13px]">—</span>
+          {% endif %}
+        </td>
+        <td class="px-6 py-4 text-center">
+          <div class="flex justify-center gap-2">
+            <button onclick="abrirEditar({{ f.id }}, '{{ f.nome }}', '{{ f.email }}', {{ f.barbeiro_id or 'null' }})"
+                    class="text-primary border border-primary/30 hover:bg-primary/10 px-3 py-1 font-body text-[11px] uppercase tracking-widest transition-colors">
+              Editar
+            </button>
+            <a href="{{ url_for('admin_funcionario_excluir', id=f.id) }}"
+               onclick="return confirm('Remover acesso de {{ f.nome }}?')"
+               class="text-error border border-error/30 hover:bg-error/10 px-3 py-1 font-body text-[11px] uppercase tracking-widest transition-colors">
+              Remover
+            </a>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if not funcionarios %}
+  <div class="text-center py-16">
+    <span class="material-symbols-outlined text-primary/20 text-[80px]">badge</span>
+    <p class="font-body text-on-surface-variant mt-4">Nenhum funcionário cadastrado ainda.</p>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Modal Novo -->
+<div id="modal-novo" class="hidden fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
+  <div class="bg-surface-container-low border border-outline-variant/30 w-full max-w-lg p-8">
+    <div class="flex justify-between items-center mb-6">
+      <h3 class="font-display text-[22px] text-primary">Novo Funcionário</h3>
+      <button onclick="document.getElementById('modal-novo').classList.add('hidden')"
+              class="text-on-surface-variant hover:text-error transition-colors">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <form method="POST" action="{{ url_for('admin_funcionario_novo') }}" class="space-y-4">
+      <div>
+        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Nome *</label>
+        <input type="text" name="nome" required placeholder="Nome completo"
+               class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0 placeholder:text-outline-variant"/>
+      </div>
+      <div>
+        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Email *</label>
+        <input type="email" name="email" required placeholder="email@exemplo.com"
+               class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0 placeholder:text-outline-variant"/>
+      </div>
+      <div>
+        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Senha *</label>
+        <input type="password" name="senha" required placeholder="Mínimo 6 caracteres"
+               class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0 placeholder:text-outline-variant"/>
+      </div>
+      <div>
+        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Vincular ao Barbeiro</label>
+        <select name="barbeiro_id" class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0">
+          <option value="">— Sem vínculo —</option>
+          {% for b in barbeiros %}
+          <option value="{{ b.id }}">{{ b.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="w-full bg-primary text-on-primary py-3 font-body uppercase tracking-widest font-bold hover:bg-primary-container transition-all mt-2">
+        Criar Conta
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Editar -->
+<div id="modal-editar" class="hidden fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
+  <div class="bg-surface-container-low border border-outline-variant/30 w-full max-w-lg p-8">
+    <div class="flex justify-between items-center mb-6">
+      <h3 class="font-display text-[22px] text-primary">Editar Funcionário</h3>
+      <button onclick="document.getElementById('modal-editar').classList.add('hidden')"
+              class="text-on-surface-variant hover:text-error transition-colors">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <form id="form-editar" method="POST" class="space-y-4">
+      <div>
+        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Nome *</label>
+        <input id="e-nome" type="text" name="nome" required
+               class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0"/>
+      </div>
+      <div>
+        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Email *</label>
+        <input id="e-email" type="email" name="email" required
+               class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0"/>
+      </div>
+      <div>
+        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Nova Senha <span class="text-outline-variant normal-case">(deixe em branco para manter)</span></label>
+        <input type="password" name="senha" placeholder="Nova senha..."
+               class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0 placeholder:text-outline-variant"/>
+      </div>
+      <div>
+        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Barbeiro Vinculado</label>
+        <select id="e-barbeiro" name="barbeiro_id" class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0">
+          <option value="">— Sem vínculo —</option>
+          {% for b in barbeiros %}
+          <option value="{{ b.id }}">{{ b.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="w-full bg-primary text-on-primary py-3 font-body uppercase tracking-widest font-bold hover:bg-primary-container transition-all mt-2">
+        Salvar Alterações
+      </button>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+function abrirEditar(id, nome, email, barbeiroId) {
+  document.getElementById('e-nome').value = nome;
+  document.getElementById('e-email').value = email;
+  const sel = document.getElementById('e-barbeiro');
+  for (let o of sel.options) {
+    o.selected = (barbeiroId !== null && parseInt(o.value) === barbeiroId);
+  }
+  document.getElementById('form-editar').action = '/admin/funcionarios/editar/' + id;
+  document.getElementById('modal-editar').classList.remove('hidden');
+}
+</script>
+{% endblock %}

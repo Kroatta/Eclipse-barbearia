@@ -85,6 +85,27 @@ def init_db():
             FOREIGN KEY(servico_id) REFERENCES servicos(id)
         );
 
+        CREATE TABLE IF NOT EXISTS produtos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            descricao TEXT,
+            quantidade INTEGER DEFAULT 0,
+            unidade TEXT DEFAULT 'un',
+            ativo INTEGER DEFAULT 1,
+            criado_em TEXT DEFAULT (datetime('now','localtime'))
+        );
+
+        CREATE TABLE IF NOT EXISTS uso_produtos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            produto_id INTEGER NOT NULL,
+            usuario_id INTEGER NOT NULL,
+            quantidade INTEGER DEFAULT 1,
+            observacao TEXT,
+            criado_em TEXT DEFAULT (datetime('now','localtime')),
+            FOREIGN KEY(produto_id) REFERENCES produtos(id),
+            FOREIGN KEY(usuario_id) REFERENCES usuarios(id)
+        );
+
         CREATE TABLE IF NOT EXISTS avaliacoes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             usuario_id INTEGER NOT NULL,
@@ -143,11 +164,16 @@ def init_db():
                 VALUES (1, ?, ?, ?, ?)
             """, (random.randint(1,3), random.randint(1,6), random.choice(statuses), data))
 
-    # Migração: adiciona coluna nome_avulso se não existir
-    try:
-        c.execute("ALTER TABLE agendamentos ADD COLUMN nome_avulso TEXT")
-    except Exception:
-        pass
+    # Migrações para bancos existentes
+    for sql in [
+        "ALTER TABLE agendamentos ADD COLUMN nome_avulso TEXT",
+        "ALTER TABLE usuarios ADD COLUMN is_funcionario INTEGER DEFAULT 0",
+        "ALTER TABLE barbeiros ADD COLUMN usuario_id INTEGER",
+    ]:
+        try:
+            c.execute(sql)
+        except Exception:
+            pass
 
     conn.commit()
     conn.close()
@@ -169,6 +195,17 @@ def login_required(f):
         if 'user_id' not in session:
             flash('Faça login para continuar.', 'error')
             return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
+
+def funcionario_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        if not session.get('is_funcionario') and not session.get('is_admin'):
+            flash('Acesso restrito a funcionarios.', 'error')
+            return redirect(url_for('index'))
         return f(*args, **kwargs)
     return decorated
 
@@ -213,7 +250,10 @@ def login():
             session['user_id'] = user['id']
             session['user_nome'] = user['nome']
             session['is_admin'] = False
+            session['is_funcionario'] = bool(user['is_funcionario'])
             flash(f'Bem-vindo de volta, {user["nome"].split()[0]}!', 'success')
+            if user['is_funcionario']:
+                return redirect(url_for('funcionario_agenda'))
             return redirect(url_for('meus_agendamentos'))
         flash('Email ou senha incorretos.', 'error')
     return render_template('client/login.html')
@@ -423,6 +463,69 @@ def cancelar_agendamento(id):
     db.close()
     return redirect(url_for('meus_agendamentos'))
 
+# ─── ROTAS FUNCIONÁRIO ───────────────────────────────────────────────────────
+
+@app.route('/funcionario/agenda')
+@funcionario_required
+def funcionario_agenda():
+    db = get_db()
+    barbeiro = db.execute("SELECT * FROM barbeiros WHERE usuario_id=?", (session['user_id'],)).fetchone()
+    agendamentos = []
+    if barbeiro:
+        agendamentos = db.execute("""
+            SELECT a.*, s.nome as servico_nome, s.duracao, s.preco,
+                   COALESCE(a.nome_avulso, u.nome) as usuario_nome
+            FROM agendamentos a
+            JOIN servicos s ON a.servico_id = s.id
+            JOIN usuarios u ON a.usuario_id = u.id
+            WHERE a.barbeiro_id = ?
+            ORDER BY a.data_hora DESC
+        """, (barbeiro['id'],)).fetchall()
+    db.close()
+    agora = datetime.now().strftime('%Y-%m-%d %H:%M')
+    return render_template('funcionario/agenda.html', agendamentos=agendamentos, barbeiro=barbeiro, agora=agora)
+
+@app.route('/funcionario/estoque')
+@funcionario_required
+def funcionario_estoque():
+    db = get_db()
+    produtos = db.execute("SELECT * FROM produtos WHERE ativo=1 ORDER BY nome").fetchall()
+    historico = db.execute("""
+        SELECT up.*, p.nome as produto_nome, p.unidade
+        FROM uso_produtos up
+        JOIN produtos p ON up.produto_id = p.id
+        WHERE up.usuario_id = ?
+        ORDER BY up.criado_em DESC LIMIT 30
+    """, (session['user_id'],)).fetchall()
+    db.close()
+    return render_template('funcionario/estoque.html', produtos=produtos, historico=historico)
+
+@app.route('/funcionario/pegar-produto/<int:produto_id>', methods=['POST'])
+@funcionario_required
+def funcionario_pegar_produto(produto_id):
+    quantidade = request.form.get('quantidade', 1, type=int)
+    observacao = request.form.get('observacao', '').strip()
+    if quantidade < 1:
+        flash('Quantidade invalida.', 'error')
+        return redirect(url_for('funcionario_estoque'))
+    db = get_db()
+    produto = db.execute("SELECT * FROM produtos WHERE id=? AND ativo=1", (produto_id,)).fetchone()
+    if not produto:
+        db.close()
+        flash('Produto nao encontrado.', 'error')
+        return redirect(url_for('funcionario_estoque'))
+    if produto['quantidade'] < quantidade:
+        db.close()
+        flash(f'Estoque insuficiente. Disponivel: {produto["quantidade"]} {produto["unidade"]}.', 'error')
+        return redirect(url_for('funcionario_estoque'))
+    db.execute("UPDATE produtos SET quantidade = quantidade - ? WHERE id=?", (quantidade, produto_id))
+    db.execute("INSERT INTO uso_produtos (produto_id, usuario_id, quantidade, observacao) VALUES (?,?,?,?)",
+               (produto_id, session['user_id'], quantidade, observacao))
+    db.commit()
+    db.close()
+    flash(f'{quantidade} {produto["unidade"]} de "{produto["nome"]}" retirado do estoque.', 'success')
+    return redirect(url_for('funcionario_estoque'))
+
 # ─── ROTAS ADMIN ─────────────────────────────────────────────────────────────
 
 @app.route('/admin')
@@ -571,6 +674,165 @@ def admin_agendamentos():
     """).fetchall()
     db.close()
     return render_template('admin/agendamentos.html', agendamentos=agendamentos)
+
+@app.route('/admin/estoque')
+@admin_required
+def admin_estoque():
+    db = get_db()
+    produtos = db.execute("SELECT * FROM produtos ORDER BY ativo DESC, nome").fetchall()
+    db.close()
+    return render_template('admin/estoque.html', produtos=produtos)
+
+@app.route('/admin/estoque/novo', methods=['POST'])
+@admin_required
+def admin_estoque_novo():
+    nome = request.form.get('nome', '').strip()
+    descricao = request.form.get('descricao', '').strip()
+    quantidade = request.form.get('quantidade', 0, type=int)
+    unidade = request.form.get('unidade', 'un').strip()
+    if not nome:
+        flash('Nome do produto e obrigatorio.', 'error')
+        return redirect(url_for('admin_estoque'))
+    db = get_db()
+    db.execute("INSERT INTO produtos (nome, descricao, quantidade, unidade) VALUES (?,?,?,?)",
+               (nome, descricao, quantidade, unidade))
+    db.commit()
+    db.close()
+    flash('Produto adicionado ao estoque!', 'success')
+    return redirect(url_for('admin_estoque'))
+
+@app.route('/admin/estoque/editar/<int:id>', methods=['POST'])
+@admin_required
+def admin_estoque_editar(id):
+    nome = request.form.get('nome', '').strip()
+    descricao = request.form.get('descricao', '').strip()
+    quantidade = request.form.get('quantidade', 0, type=int)
+    unidade = request.form.get('unidade', 'un').strip()
+    db = get_db()
+    db.execute("UPDATE produtos SET nome=?, descricao=?, quantidade=?, unidade=? WHERE id=?",
+               (nome, descricao, quantidade, unidade, id))
+    db.commit()
+    db.close()
+    flash('Produto atualizado!', 'success')
+    return redirect(url_for('admin_estoque'))
+
+@app.route('/admin/estoque/excluir/<int:id>')
+@admin_required
+def admin_estoque_excluir(id):
+    db = get_db()
+    db.execute("UPDATE produtos SET ativo=0 WHERE id=?", (id,))
+    db.commit()
+    db.close()
+    flash('Produto removido do estoque.', 'success')
+    return redirect(url_for('admin_estoque'))
+
+@app.route('/admin/funcionarios')
+@admin_required
+def admin_funcionarios():
+    db = get_db()
+    funcionarios = db.execute("""
+        SELECT u.*, b.nome as barbeiro_nome, b.id as barbeiro_id
+        FROM usuarios u
+        LEFT JOIN barbeiros b ON b.usuario_id = u.id
+        WHERE u.is_funcionario = 1
+        ORDER BY u.nome
+    """).fetchall()
+    barbeiros = db.execute("SELECT * FROM barbeiros WHERE ativo=1 ORDER BY nome").fetchall()
+    db.close()
+    return render_template('admin/funcionarios.html', funcionarios=funcionarios, barbeiros=barbeiros)
+
+@app.route('/admin/funcionarios/novo', methods=['POST'])
+@admin_required
+def admin_funcionario_novo():
+    nome = request.form.get('nome', '').strip()
+    email = request.form.get('email', '').strip()
+    senha = request.form.get('senha', '')
+    telefone = request.form.get('telefone', '').strip()
+    barbeiro_id = request.form.get('barbeiro_id')
+    if not all([nome, email, senha]):
+        flash('Preencha todos os campos obrigatorios.', 'error')
+        return redirect(url_for('admin_funcionarios'))
+    db = get_db()
+    if db.execute("SELECT id FROM usuarios WHERE email=?", (email,)).fetchone():
+        db.close()
+        flash('Email ja cadastrado.', 'error')
+        return redirect(url_for('admin_funcionarios'))
+    cursor = db.execute("INSERT INTO usuarios (nome, email, senha, telefone, is_funcionario) VALUES (?,?,?,?,1)",
+                        (nome, email, generate_password_hash(senha), telefone))
+    novo_id = cursor.lastrowid
+    if barbeiro_id:
+        db.execute("UPDATE barbeiros SET usuario_id=? WHERE id=?", (novo_id, barbeiro_id))
+    db.commit()
+    db.close()
+    flash(f'Funcionario {nome} criado com sucesso!', 'success')
+    return redirect(url_for('admin_funcionarios'))
+
+@app.route('/admin/funcionarios/editar/<int:id>', methods=['POST'])
+@admin_required
+def admin_funcionario_editar(id):
+    nome = request.form.get('nome', '').strip()
+    email = request.form.get('email', '').strip()
+    senha = request.form.get('senha', '')
+    barbeiro_id = request.form.get('barbeiro_id')
+    if not all([nome, email]):
+        flash('Nome e email sao obrigatorios.', 'error')
+        return redirect(url_for('admin_funcionarios'))
+    db = get_db()
+    existing = db.execute("SELECT id FROM usuarios WHERE email=? AND id!=?", (email, id)).fetchone()
+    if existing:
+        db.close()
+        flash('Email ja usado por outro usuario.', 'error')
+        return redirect(url_for('admin_funcionarios'))
+    if senha:
+        db.execute("UPDATE usuarios SET nome=?, email=?, senha=? WHERE id=? AND is_funcionario=1",
+                   (nome, email, generate_password_hash(senha), id))
+    else:
+        db.execute("UPDATE usuarios SET nome=?, email=? WHERE id=? AND is_funcionario=1",
+                   (nome, email, id))
+    db.execute("UPDATE barbeiros SET usuario_id=NULL WHERE usuario_id=?", (id,))
+    if barbeiro_id:
+        db.execute("UPDATE barbeiros SET usuario_id=? WHERE id=?", (id, barbeiro_id))
+    db.commit()
+    db.close()
+    flash('Funcionario atualizado.', 'success')
+    return redirect(url_for('admin_funcionarios'))
+
+@app.route('/admin/funcionarios/excluir/<int:id>')
+@admin_required
+def admin_funcionario_excluir(id):
+    db = get_db()
+    db.execute("UPDATE barbeiros SET usuario_id=NULL WHERE usuario_id=?", (id,))
+    db.execute("DELETE FROM usuarios WHERE id=? AND is_funcionario=1", (id,))
+    db.commit()
+    db.close()
+    flash('Funcionario removido.', 'success')
+    return redirect(url_for('admin_funcionarios'))
+
+@app.route('/admin/profissionais-dash')
+@admin_required
+def admin_profissionais_dash():
+    db = get_db()
+    resumo = db.execute("""
+        SELECT u.id, u.nome,
+               COUNT(up.id) as total_retiradas,
+               COALESCE(SUM(up.quantidade), 0) as total_quantidade
+        FROM usuarios u
+        LEFT JOIN uso_produtos up ON up.usuario_id = u.id
+        WHERE u.is_funcionario = 1
+        GROUP BY u.id, u.nome
+        ORDER BY total_quantidade DESC
+    """).fetchall()
+    detalhes = db.execute("""
+        SELECT u.nome as funcionario_nome, p.nome as produto_nome,
+               p.unidade, SUM(up.quantidade) as total, COUNT(up.id) as vezes
+        FROM uso_produtos up
+        JOIN usuarios u ON up.usuario_id = u.id
+        JOIN produtos p ON up.produto_id = p.id
+        GROUP BY up.usuario_id, up.produto_id
+        ORDER BY u.nome, total DESC
+    """).fetchall()
+    db.close()
+    return render_template('admin/profissionais_dash.html', resumo=resumo, detalhes=detalhes)
 
 @app.route('/admin/graficos')
 @admin_required
