@@ -164,6 +164,47 @@ def init_db():
                 VALUES (1, ?, ?, ?, ?)
             """, (random.randint(1,3), random.randint(1,6), random.choice(statuses), data))
 
+    # Seed funcionários vinculados aos barbeiros
+    if not c.execute("SELECT id FROM usuarios WHERE is_funcionario=1 LIMIT 1").fetchone():
+        from datetime import datetime, timedelta
+        funcs = [
+            ('Ricardo Silva', 'ricardo.func@eclipse.com', 'Navalha Clássica, Visagismo'),
+            ('Fabio Mendes',  'fabio.func@eclipse.com',  'Fade Moderno, Barboterapia'),
+            ('Lucas Santos',  'lucas.func@eclipse.com',  'Tribal Art, Hair Design'),
+        ]
+        for nome, email, esp in funcs:
+            if not c.execute("SELECT id FROM usuarios WHERE email=?", (email,)).fetchone():
+                c.execute("INSERT INTO usuarios (nome, email, senha, is_funcionario) VALUES (?,?,?,1)",
+                          (nome, email, generate_password_hash('func123')))
+                func_id = c.lastrowid
+                c.execute("UPDATE barbeiros SET usuario_id=? WHERE nome=?", (func_id, nome))
+
+    # Seed produtos de exemplo
+    if not c.execute("SELECT id FROM produtos LIMIT 1").fetchone():
+        produtos = [
+            ('Pomada Modeladora', 'Fixacao forte e brilho intenso', 15, 'un'),
+            ('Oleo de Barba',     'Hidratacao e amolecimento para barbas', 20, 'fr'),
+            ('Shampoo Masculino', 'Limpeza profunda para couro cabeludo', 30, 'fr'),
+            ('Cera Capilar',      'Acabamento natural e flexivel', 10, 'un'),
+            ('Balm para Barba',   'Hidratante e condicionador de barba', 12, 'un'),
+        ]
+        c.executemany("INSERT INTO produtos (nome, descricao, quantidade, unidade) VALUES (?,?,?,?)", produtos)
+
+    # Seed retiradas de exemplo
+    if not c.execute("SELECT id FROM uso_produtos LIMIT 1").fetchone():
+        import random
+        from datetime import datetime, timedelta
+        funcs = c.execute("SELECT id FROM usuarios WHERE is_funcionario=1").fetchall()
+        prods = c.execute("SELECT id FROM produtos").fetchall()
+        if funcs and prods:
+            obs_lista = ['Usado no cliente', 'Servico de barba', 'Corte + barba', 'Finalizacao', '']
+            for _ in range(35):
+                dias_atras = random.randint(0, 30)
+                data = (datetime.now() - timedelta(days=dias_atras)).strftime('%Y-%m-%d %H:%M')
+                c.execute("INSERT INTO uso_produtos (produto_id, usuario_id, quantidade, observacao, criado_em) VALUES (?,?,?,?,?)",
+                          (random.choice(prods)[0], random.choice(funcs)[0],
+                           random.randint(1, 3), random.choice(obs_lista), data))
+
     # Migrações para bancos existentes
     for sql in [
         "ALTER TABLE agendamentos ADD COLUMN nome_avulso TEXT",
@@ -680,8 +721,19 @@ def admin_agendamentos():
 def admin_estoque():
     db = get_db()
     produtos = db.execute("SELECT * FROM produtos ORDER BY ativo DESC, nome").fetchall()
+    historico = db.execute("""
+        SELECT up.id, up.quantidade, up.observacao, up.criado_em,
+               p.nome as produto_nome, p.unidade,
+               COALESCE(b.nome, u.nome) as func_nome
+        FROM uso_produtos up
+        JOIN produtos p ON up.produto_id = p.id
+        JOIN usuarios u ON up.usuario_id = u.id
+        LEFT JOIN barbeiros b ON b.usuario_id = u.id
+        ORDER BY up.criado_em DESC
+        LIMIT 50
+    """).fetchall()
     db.close()
-    return render_template('admin/estoque.html', produtos=produtos)
+    return render_template('admin/estoque.html', produtos=produtos, historico=historico)
 
 @app.route('/admin/estoque/novo', methods=['POST'])
 @admin_required
@@ -834,7 +886,7 @@ def admin_profissionais_dash():
 @app.route('/admin/graficos')
 @admin_required
 def admin_graficos():
-    return render_template('admin/graficos.html')
+    return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/calendario')
 @admin_required
@@ -1003,6 +1055,23 @@ def api_barbeiros_ranking():
         JOIN barbeiros b ON a.barbeiro_id=b.id
         JOIN servicos s ON a.servico_id=s.id
         WHERE a.status != 'cancelado'
+        GROUP BY b.id, b.nome
+        ORDER BY total DESC
+    """).fetchall()
+    db.close()
+    return jsonify([dict(r) for r in dados])
+
+@app.route('/api/graficos/produtos-barbeiros')
+@admin_required
+def api_produtos_barbeiros():
+    db = get_db()
+    dados = db.execute("""
+        SELECT b.nome as barbeiro,
+               SUM(up.quantidade) as total,
+               COUNT(up.id) as retiradas
+        FROM uso_produtos up
+        JOIN usuarios u ON up.usuario_id = u.id
+        JOIN barbeiros b ON b.usuario_id = u.id
         GROUP BY b.id, b.nome
         ORDER BY total DESC
     """).fetchall()

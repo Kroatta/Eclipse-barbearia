@@ -1,109 +1,307 @@
 {% extends "admin/base_admin.html" %}
 {% block admin_title %}Dashboard{% endblock %}
-
 {% block admin_content %}
-<div class="mb-8">
-  <span class="text-primary font-body text-[12px] uppercase tracking-[0.3em] block mb-2">Administração</span>
-  <h1 class="font-display text-[32px] text-on-background font-semibold">Dashboard</h1>
+
+<div class="mb-6 flex items-end justify-between">
+  <div>
+    <span class="text-primary font-body text-[12px] uppercase tracking-[0.3em] block mb-2">Administração</span>
+    <h1 class="font-display text-[32px] text-on-background font-semibold">Dashboard</h1>
+  </div>
+  <div class="flex bg-surface-container-low border border-outline-variant/20 p-1 gap-1">
+    <button onclick="setPeriod('diario')" id="btn-diario" class="period-btn px-4 py-2 font-body text-[13px] uppercase tracking-wider transition-all active-period">Diário</button>
+    <button onclick="setPeriod('mensal')" id="btn-mensal" class="period-btn px-4 py-2 font-body text-[13px] uppercase tracking-wider transition-all">Mensal</button>
+    <button onclick="setPeriod('anual')" id="btn-anual"  class="period-btn px-4 py-2 font-body text-[13px] uppercase tracking-wider transition-all">Anual</button>
+  </div>
 </div>
 
 <!-- KPI CARDS -->
-<div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10">
-  <div class="bg-surface-container border border-outline-variant/20 p-6 flex flex-col justify-between h-36 hover:border-primary/30 transition-all">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+  <div class="bg-surface-container border border-outline-variant/20 p-5 flex flex-col justify-between h-32 hover:border-primary/30 transition-all">
     <div class="flex items-start justify-between">
-      <span class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest">Total Agendamentos</span>
-      <span class="material-symbols-outlined text-primary/40 text-[28px]">calendar_month</span>
+      <span class="font-body text-[11px] text-on-surface-variant uppercase tracking-widest">Agendamentos</span>
+      <span class="material-symbols-outlined text-primary/30 text-[24px]">calendar_month</span>
     </div>
-    <span class="font-display text-[36px] text-primary font-bold">{{ total_agendamentos }}</span>
+    <span class="font-display text-[32px] text-primary font-bold">{{ total_agendamentos }}</span>
   </div>
-  <div class="bg-surface-container border border-outline-variant/20 p-6 flex flex-col justify-between h-36 hover:border-primary/30 transition-all">
+  <div class="bg-surface-container border border-outline-variant/20 p-5 flex flex-col justify-between h-32 hover:border-primary/30 transition-all">
     <div class="flex items-start justify-between">
-      <span class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest">Clientes</span>
-      <span class="material-symbols-outlined text-primary/40 text-[28px]">group</span>
+      <span class="font-body text-[11px] text-on-surface-variant uppercase tracking-widest">Clientes</span>
+      <span class="material-symbols-outlined text-primary/30 text-[24px]">group</span>
     </div>
-    <span class="font-display text-[36px] text-primary font-bold">{{ total_clientes }}</span>
+    <span class="font-display text-[32px] text-primary font-bold">{{ total_clientes }}</span>
   </div>
-  <div class="bg-surface-container border border-outline-variant/20 p-6 flex flex-col justify-between h-36 hover:border-primary/30 transition-all">
+  <div class="bg-surface-container border border-outline-variant/20 p-5 flex flex-col justify-between h-32 hover:border-primary/30 transition-all">
     <div class="flex items-start justify-between">
-      <span class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest">Barbeiros</span>
-      <span class="material-symbols-outlined text-primary/40 text-[28px]">content_cut</span>
+      <span class="font-body text-[11px] text-on-surface-variant uppercase tracking-widest">Barbeiros</span>
+      <span class="material-symbols-outlined text-primary/30 text-[24px]">content_cut</span>
     </div>
-    <span class="font-display text-[36px] text-primary font-bold">{{ total_barbeiros }}</span>
+    <span class="font-display text-[32px] text-primary font-bold">{{ total_barbeiros }}</span>
   </div>
-  <div class="bg-surface-container-high border-2 border-primary p-6 flex flex-col justify-between h-36">
-    <span class="font-body text-[12px] text-primary uppercase tracking-widest font-bold">Receita Total</span>
-    <span class="font-display text-[26px] text-on-background font-bold">R$ {{ "%.0f"|format(receita) }}</span>
+  <div class="bg-surface-container-high border-2 border-primary p-5 flex flex-col justify-between h-32">
+    <span class="font-body text-[11px] text-primary uppercase tracking-widest font-bold">Receita Total</span>
+    <span class="font-display text-[24px] text-on-background font-bold">R$ {{ "%.0f"|format(receita) }}</span>
   </div>
 </div>
 
-<!-- MINI CHART + RECENT -->
-<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-  <!-- MINI CHART -->
-  <div class="bg-surface-container-low border border-outline-variant/20 p-6">
-    <div class="flex items-center justify-between mb-6">
-      <h3 class="font-body text-[14px] text-on-background uppercase tracking-widest font-semibold">Serviços Populares</h3>
-      <a href="{{ url_for('admin_graficos') }}" class="text-primary font-body text-[13px] hover:underline">Ver tudo →</a>
-    </div>
-    <canvas id="miniChart" height="200"></canvas>
+<!-- KPI dinâmicos (período) -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+  <div class="bg-surface-container border border-outline-variant/20 p-4">
+    <p class="font-body text-[11px] text-on-surface-variant uppercase tracking-widest mb-1">Agendamentos (período)</p>
+    <p class="font-display text-[24px] text-primary font-bold" id="kpi-total">—</p>
   </div>
+  <div class="bg-surface-container border border-outline-variant/20 p-4">
+    <p class="font-body text-[11px] text-on-surface-variant uppercase tracking-widest mb-1">Receita (período)</p>
+    <p class="font-display text-[24px] text-primary font-bold" id="kpi-receita">—</p>
+  </div>
+  <div class="bg-surface-container border border-outline-variant/20 p-4">
+    <p class="font-body text-[11px] text-on-surface-variant uppercase tracking-widest mb-1">Top Serviço</p>
+    <p class="font-display text-[18px] text-on-background font-bold" id="kpi-top-servico">—</p>
+  </div>
+  <div class="bg-surface-container border border-outline-variant/20 p-4">
+    <p class="font-body text-[11px] text-on-surface-variant uppercase tracking-widest mb-1">Top Barbeiro</p>
+    <p class="font-display text-[18px] text-on-background font-bold" id="kpi-top-barbeiro">—</p>
+  </div>
+</div>
 
-  <!-- RECENT APPOINTMENTS -->
+<!-- GRÁFICOS LINHA 1: Período + Serviços -->
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
   <div class="xl:col-span-2 bg-surface-container-low border border-outline-variant/20 p-6">
-    <div class="flex items-center justify-between mb-6">
-      <h3 class="font-body text-[14px] text-on-background uppercase tracking-widest font-semibold">Agendamentos Recentes</h3>
-      <a href="{{ url_for('admin_agendamentos') }}" class="text-primary font-body text-[13px] hover:underline">Ver todos →</a>
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="font-body text-[14px] text-on-background font-semibold uppercase tracking-wider">Agendamentos por Período</h3>
+        <p class="font-body text-[12px] text-on-surface-variant mt-0.5" id="chart-subtitle">Hoje — por hora</p>
+      </div>
+      <span class="material-symbols-outlined text-primary/30 text-[28px]">trending_up</span>
     </div>
-    <div class="space-y-3">
-      {% for a in agendamentos_recentes %}
-      <div class="flex items-center justify-between py-3 border-b border-outline-variant/10">
-        <div class="flex items-center gap-4">
-          <div class="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center">
-            <span class="font-display text-primary text-[14px]">{{ a.usuario_nome[0] }}</span>
-          </div>
-          <div>
-            <p class="font-body text-[14px] text-on-background font-semibold">{{ a.usuario_nome.split()[:2]|join(' ') }}</p>
-            <p class="font-body text-[12px] text-on-surface-variant">{{ a.servico_nome }} • {{ a.barbeiro_nome.split()[0] }}</p>
-          </div>
+    <div style="height:280px"><canvas id="chartPeriodo"></canvas></div>
+  </div>
+  <div class="bg-surface-container-low border border-outline-variant/20 p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-body text-[14px] text-on-background font-semibold uppercase tracking-wider">Top Serviços</h3>
+      <span class="material-symbols-outlined text-primary/30 text-[24px]">content_cut</span>
+    </div>
+    <div style="height:280px"><canvas id="chartServicos"></canvas></div>
+  </div>
+</div>
+
+<!-- GRÁFICOS LINHA 2: Barbeiros + Produtos -->
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+  <div class="bg-surface-container-low border border-outline-variant/20 p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-body text-[14px] text-on-background font-semibold uppercase tracking-wider">Ranking Barbeiros</h3>
+      <span class="material-symbols-outlined text-primary/30 text-[24px]">emoji_events</span>
+    </div>
+    <div style="height:240px"><canvas id="chartBarbeiros"></canvas></div>
+  </div>
+  <div class="bg-surface-container-low border border-outline-variant/20 p-6">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="font-body text-[14px] text-on-background font-semibold uppercase tracking-wider">Produtos Retirados por Barbeiro</h3>
+        <p class="font-body text-[12px] text-on-surface-variant mt-0.5">Total de itens retirados do estoque</p>
+      </div>
+      <span class="material-symbols-outlined text-primary/30 text-[24px]">inventory_2</span>
+    </div>
+    <div style="height:240px"><canvas id="chartProdutos"></canvas></div>
+  </div>
+</div>
+
+<!-- GRÁFICO LINHA 3: Receita por serviço -->
+<div class="bg-surface-container-low border border-outline-variant/20 p-6 mb-6">
+  <div class="flex items-center justify-between mb-4">
+    <h3 class="font-body text-[14px] text-on-background font-semibold uppercase tracking-wider">Receita por Serviço</h3>
+    <span class="material-symbols-outlined text-primary/30 text-[24px]">payments</span>
+  </div>
+  <div style="height:220px"><canvas id="chartReceita"></canvas></div>
+</div>
+
+<!-- TABELA: Serviços detalhados -->
+<div class="bg-surface-container-low border border-outline-variant/20 p-6 mb-6">
+  <h3 class="font-body text-[14px] text-on-background font-semibold uppercase tracking-wider mb-4">Detalhes — Serviços</h3>
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead>
+        <tr class="border-b border-outline-variant/20">
+          <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-left pb-3 pr-4">#</th>
+          <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-left pb-3 pr-4">Serviço</th>
+          <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-right pb-3 pr-4">Agendamentos</th>
+          <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-right pb-3 pr-4">Receita Total</th>
+          <th class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest text-right pb-3">Participação</th>
+        </tr>
+      </thead>
+      <tbody id="table-servicos" class="divide-y divide-outline-variant/10"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- AGENDAMENTOS RECENTES -->
+<div class="bg-surface-container-low border border-outline-variant/20 p-6">
+  <div class="flex items-center justify-between mb-4">
+    <h3 class="font-body text-[14px] text-on-background font-semibold uppercase tracking-wider">Agendamentos Recentes</h3>
+    <a href="{{ url_for('admin_agendamentos') }}" class="text-primary font-body text-[13px] hover:underline">Ver todos →</a>
+  </div>
+  <div class="space-y-3">
+    {% for a in agendamentos_recentes %}
+    <div class="flex items-center justify-between py-3 border-b border-outline-variant/10">
+      <div class="flex items-center gap-4">
+        <div class="w-9 h-9 bg-surface-container flex items-center justify-center border border-outline-variant/20">
+          <span class="font-display text-primary text-[14px]">{{ a.usuario_nome[0] }}</span>
         </div>
-        <div class="text-right">
-          <p class="font-body text-[13px] text-primary font-bold">R$ {{ "%.0f"|format(a.preco) }}</p>
-          <span class="font-body text-[11px] uppercase px-2 py-0.5
-            {% if a.status == 'confirmado' %}text-primary bg-primary/10
-            {% elif a.status == 'concluido' %}text-green-400 bg-green-500/10
-            {% else %}text-error bg-error/10{% endif %}">
-            {{ a.status }}
-          </span>
+        <div>
+          <p class="font-body text-[14px] text-on-background font-semibold">{{ a.usuario_nome.split()[:2]|join(' ') }}</p>
+          <p class="font-body text-[12px] text-on-surface-variant">{{ a.servico_nome }} • {{ a.barbeiro_nome.split()[0] }}</p>
         </div>
       </div>
-      {% endfor %}
+      <div class="text-right">
+        <p class="font-body text-[13px] text-primary font-bold">R$ {{ "%.0f"|format(a.preco) }}</p>
+        <span class="font-body text-[11px] uppercase px-2 py-0.5
+          {% if a.status == 'confirmado' %}text-primary bg-primary/10
+          {% elif a.status == 'concluido' %}text-green-400 bg-green-500/10
+          {% else %}text-error bg-error/10{% endif %}">{{ a.status }}</span>
+      </div>
     </div>
+    {% endfor %}
   </div>
 </div>
+
+<style>
+  .period-btn { color: #d0c5af; }
+  .active-period { background: #f2ca50; color: #3c2f00; font-weight: 700; }
+</style>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-fetch('/api/graficos/servicos-populares')
-  .then(r => r.json())
-  .then(data => {
-    const ctx = document.getElementById('miniChart').getContext('2d');
-    new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: data.map(d => d.nome),
-        datasets: [{
-          data: data.map(d => d.total),
-          backgroundColor: ['#f2ca50','#d4af37','#e9c349','#b8963e','#ffd980','#a07830'],
-          borderColor: '#201f1f',
-          borderWidth: 3
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { position: 'bottom', labels: { color: '#d0c5af', font: { family: 'Hanken Grotesk', size: 12 }, padding: 16 } }
-        }
-      }
+const GOLD='#f2ca50',GOLD2='#d4af37',GOLD3='#e9c349',GOLD4='#b8963e',GOLD5='#ffd980',GOLD6='#a07830';
+const SURFACE='#201f1f', TEXT='#d0c5af';
+
+const base = {
+  responsive:true, maintainAspectRatio:false,
+  plugins:{
+    legend:{labels:{color:TEXT,font:{family:'Hanken Grotesk',size:11},padding:12}},
+    tooltip:{backgroundColor:'#2a2a2a',titleColor:GOLD,bodyColor:'#e5e2e1',borderColor:'#4d4635',borderWidth:1}
+  },
+  scales:{
+    x:{ticks:{color:TEXT,font:{family:'Hanken Grotesk'}},grid:{color:'rgba(77,70,53,0.3)'}},
+    y:{ticks:{color:TEXT,font:{family:'Hanken Grotesk'}},grid:{color:'rgba(77,70,53,0.3)'}}
+  }
+};
+
+let chartPeriodo;
+
+window.addEventListener('DOMContentLoaded', () => {
+  initStaticCharts();
+  loadPeriod('diario');
+});
+
+function initStaticCharts() {
+  // Serviços (doughnut)
+  fetch('/api/graficos/servicos-populares').then(r=>r.json()).then(data => {
+    const maxT = Math.max(...data.map(d=>d.total),1);
+    new Chart(document.getElementById('chartServicos').getContext('2d'), {
+      type:'doughnut',
+      data:{labels:data.map(d=>d.nome),datasets:[{data:data.map(d=>d.total),
+        backgroundColor:[GOLD,GOLD2,GOLD3,GOLD4,GOLD5,GOLD6],borderColor:SURFACE,borderWidth:4}]},
+      options:{...base,cutout:'60%',plugins:{...base.plugins,
+        legend:{position:'bottom',labels:{color:TEXT,font:{family:'Hanken Grotesk',size:11},padding:8}}}}
+    });
+    // Receita horizontal
+    new Chart(document.getElementById('chartReceita').getContext('2d'), {
+      type:'bar',
+      data:{labels:data.map(d=>d.nome.length>14?d.nome.slice(0,14)+'…':d.nome),
+        datasets:[{label:'Receita (R$)',data:data.map(d=>d.receita||0),
+          backgroundColor:data.map((_,i)=>i===0?GOLD:GOLD+'55'),borderColor:'transparent',borderRadius:3}]},
+      options:{...base,indexAxis:'y',plugins:{...base.plugins,legend:{display:false},
+        tooltip:{...base.plugins.tooltip,callbacks:{label:c=>`R$ ${c.parsed.x.toFixed(0)}`}}}}
+    });
+    // Tabela
+    const tbody=document.getElementById('table-servicos');
+    const tot=data.reduce((s,d)=>s+d.total,0);
+    tbody.innerHTML=data.map((d,i)=>{
+      const pct=tot>0?((d.total/tot)*100).toFixed(1):0;
+      const w=tot>0?(d.total/maxT*100).toFixed(0):0;
+      return `<tr>
+        <td class="py-3 pr-4 font-body text-[13px] text-primary font-bold">${i+1}º</td>
+        <td class="py-3 pr-4"><p class="font-body text-[14px] text-on-background font-semibold">${d.nome}</p>
+          <div class="mt-1 h-1 bg-outline-variant/20 w-40"><div class="h-1 bg-primary" style="width:${w}%"></div></div></td>
+        <td class="py-3 pr-4 text-right font-body text-[15px] text-on-background font-bold">${d.total}</td>
+        <td class="py-3 pr-4 text-right font-body text-[15px] text-primary">R$ ${(d.receita||0).toFixed(0)}</td>
+        <td class="py-3 text-right font-body text-[13px] text-on-surface-variant">${pct}%</td></tr>`;
+    }).join('');
+    if(data.length>0) document.getElementById('kpi-top-servico').textContent=data[0].nome.split(' ')[0];
+  });
+
+  // Ranking barbeiros
+  fetch('/api/graficos/barbeiros-ranking').then(r=>r.json()).then(data=>{
+    new Chart(document.getElementById('chartBarbeiros').getContext('2d'),{
+      type:'bar',
+      data:{labels:data.map(d=>d.nome.split(' ')[0]),datasets:[
+        {label:'Agendamentos',data:data.map(d=>d.total),backgroundColor:GOLD,borderColor:'transparent',borderRadius:4},
+        {label:'Receita (÷10)',data:data.map(d=>(d.receita||0)/10),backgroundColor:GOLD+'44',borderColor:'transparent',borderRadius:4}
+      ]},
+      options:{...base,plugins:{...base.plugins,legend:{labels:{color:TEXT,font:{family:'Hanken Grotesk',size:11},padding:10}}}}
+    });
+    if(data.length>0) document.getElementById('kpi-top-barbeiro').textContent=data[0].nome.split(' ')[0];
+  });
+
+  // Produtos por barbeiro
+  fetch('/api/graficos/produtos-barbeiros').then(r=>r.json()).then(data=>{
+    if(data.length===0){
+      document.getElementById('chartProdutos').parentElement.innerHTML=
+        '<p class="text-on-surface-variant font-body text-center mt-10">Nenhuma retirada registrada ainda.</p>';
+      return;
+    }
+    new Chart(document.getElementById('chartProdutos').getContext('2d'),{
+      type:'bar',
+      data:{labels:data.map(d=>d.barbeiro.split(' ')[0]),datasets:[
+        {label:'Qtd retirada',data:data.map(d=>d.total),
+          backgroundColor:[GOLD,GOLD2,GOLD3,GOLD4,GOLD5,GOLD6],borderColor:'transparent',borderRadius:6},
+        {label:'Retiradas',data:data.map(d=>d.retiradas),
+          backgroundColor:data.map(()=>GOLD+'33'),borderColor:'transparent',borderRadius:6}
+      ]},
+      options:{...base,plugins:{...base.plugins,
+        legend:{labels:{color:TEXT,font:{family:'Hanken Grotesk',size:11},padding:10}},
+        tooltip:{...base.plugins.tooltip,callbacks:{
+          label:c=>c.datasetIndex===0?` ${c.parsed.y} unidades retiradas`:` ${c.parsed.y} vezes`
+        }}}}
     });
   });
+}
+
+function loadPeriod(p) {
+  const subs={diario:'Hoje — por hora',mensal:'Este mês — por dia',anual:'Este ano — por mês'};
+  document.getElementById('chart-subtitle').textContent=subs[p];
+  const meses=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  fetch(`/api/graficos/${p}`).then(r=>r.json()).then(data=>{
+    let labels,totais,receitas;
+    if(p==='diario'){labels=data.map(d=>d.hora);totais=data.map(d=>d.total);receitas=data.map(d=>d.receita||0);}
+    else if(p==='mensal'){labels=data.map(d=>`Dia ${parseInt(d.dia)}`);totais=data.map(d=>d.total);receitas=data.map(d=>d.receita||0);}
+    else{labels=data.map(d=>meses[parseInt(d.mes)-1]);totais=data.map(d=>d.total);receitas=data.map(d=>d.receita||0);}
+    if(!labels.length){labels=['08:00','10:00','12:00','14:00','16:00'];totais=receitas=[0,0,0,0,0];}
+    document.getElementById('kpi-total').textContent=totais.reduce((a,b)=>a+b,0);
+    document.getElementById('kpi-receita').textContent=`R$ ${receitas.reduce((a,b)=>a+b,0).toFixed(0)}`;
+    if(chartPeriodo) chartPeriodo.destroy();
+    chartPeriodo=new Chart(document.getElementById('chartPeriodo').getContext('2d'),{
+      type:'bar',
+      data:{labels,datasets:[
+        {label:'Agendamentos',data:totais,type:'bar',backgroundColor:GOLD+'88',borderColor:GOLD,borderWidth:2,borderRadius:4,yAxisID:'y'},
+        {label:'Receita (R$)',data:receitas,type:'line',borderColor:GOLD2,backgroundColor:GOLD2+'22',fill:true,
+         tension:0.4,pointBackgroundColor:GOLD2,pointRadius:4,yAxisID:'y1'}
+      ]},
+      options:{...base,interaction:{mode:'index',intersect:false},plugins:{...base.plugins,
+        tooltip:{...base.plugins.tooltip,callbacks:{
+          label:c=>c.datasetIndex===0?` ${c.parsed.y} agendamentos`:` R$ ${c.parsed.y.toFixed(0)}`
+        }}},
+        scales:{x:base.scales.x,
+          y:{...base.scales.y,position:'left',title:{display:true,text:'Agendamentos',color:TEXT}},
+          y1:{...base.scales.y,position:'right',title:{display:true,text:'Receita R$',color:TEXT},grid:{drawOnChartArea:false}}
+        }}
+    });
+  });
+}
+
+function setPeriod(p) {
+  document.querySelectorAll('.period-btn').forEach(b=>{b.classList.remove('active-period');b.classList.add('text-[#d0c5af]');});
+  document.getElementById(`btn-${p}`).classList.add('active-period');
+  loadPeriod(p);
+}
 </script>
 {% endblock %}
