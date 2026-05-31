@@ -151,19 +151,6 @@ def init_db():
         ]
         c.executemany("INSERT INTO servicos (nome, descricao, preco, duracao, categoria) VALUES (?,?,?,?,?)", servicos)
 
-    # Seed agendamentos de exemplo para os gráficos
-    if not c.execute("SELECT id FROM agendamentos LIMIT 1").fetchone():
-        import random
-        from datetime import datetime, timedelta
-        statuses = ['confirmado', 'confirmado', 'confirmado', 'concluido', 'concluido', 'cancelado']
-        for i in range(120):
-            dias_atras = random.randint(0, 365)
-            data = (datetime.now() - timedelta(days=dias_atras)).strftime('%Y-%m-%d %H:%M')
-            c.execute("""
-                INSERT INTO agendamentos (usuario_id, barbeiro_id, servico_id, data_hora, status)
-                VALUES (1, ?, ?, ?, ?)
-            """, (random.randint(1,3), random.randint(1,6), random.choice(statuses), data))
-
     # Seed funcionários vinculados aos barbeiros
     if not c.execute("SELECT id FROM usuarios WHERE is_funcionario=1 LIMIT 1").fetchone():
         from datetime import datetime, timedelta
