@@ -534,7 +534,7 @@ def cancelar_agendamento(id):
 @funcionario_required
 def funcionario_agenda():
     db = get_db()
-    barbeiro = db.execute("SELECT * FROM barbeiros WHERE usuario_id=?", (session['user_id'],)).fetchone()
+    barbeiro = db.execute("SELECT * FROM barbeiros WHERE usuario_id=? AND ativo=1", (session['user_id'],)).fetchone()
     agendamentos = []
     if barbeiro:
         agendamentos = db.execute("""
@@ -595,7 +595,7 @@ def funcionario_pegar_produto(produto_id):
 @funcionario_required
 def funcionario_concluir_agendamento(id):
     db = get_db()
-    barbeiro = db.execute("SELECT * FROM barbeiros WHERE usuario_id=?", (session['user_id'],)).fetchone()
+    barbeiro = db.execute("SELECT * FROM barbeiros WHERE usuario_id=? AND ativo=1", (session['user_id'],)).fetchone()
     if barbeiro:
         ag = db.execute("SELECT * FROM agendamentos WHERE id=? AND barbeiro_id=? AND status='confirmado'",
                         (id, barbeiro['id'])).fetchone()
