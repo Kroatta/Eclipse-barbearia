@@ -730,20 +730,21 @@ def admin_barbeiro_novo():
     if not nome or not especialidade:
         flash('Nome e especialidade são obrigatórios.', 'error')
         return redirect(url_for('admin_barbeiros'))
+    if not email or not senha:
+        flash('Email e senha são obrigatórios.', 'error')
+        return redirect(url_for('admin_barbeiros'))
     db = get_db()
+    if db.execute("SELECT id FROM usuarios WHERE email=?", (email,)).fetchone():
+        flash('Este email já está em uso. Escolha outro.', 'error')
+        db.close()
+        return redirect(url_for('admin_barbeiros'))
     cursor = db.execute("INSERT INTO barbeiros (nome, especialidade, bio, nivel) VALUES (?,?,?,?)",
                         (nome, especialidade, bio, nivel))
     barb_id = cursor.lastrowid
-    if email and senha:
-        if db.execute("SELECT id FROM usuarios WHERE email=?", (email,)).fetchone():
-            flash('Barbeiro adicionado, mas o email já está em uso — acesso não criado.', 'error')
-        else:
-            cur2 = db.execute("INSERT INTO usuarios (nome, email, senha, is_funcionario) VALUES (?,?,?,1)",
-                              (nome, email, generate_password_hash(senha)))
-            db.execute("UPDATE barbeiros SET usuario_id=? WHERE id=?", (cur2.lastrowid, barb_id))
-            flash(f'Barbeiro {nome} adicionado com acesso ao sistema!', 'success')
-    else:
-        flash('Barbeiro adicionado!', 'success')
+    cur2 = db.execute("INSERT INTO usuarios (nome, email, senha, is_funcionario) VALUES (?,?,?,1)",
+                      (nome, email, generate_password_hash(senha)))
+    db.execute("UPDATE barbeiros SET usuario_id=? WHERE id=?", (cur2.lastrowid, barb_id))
+    flash(f'Barbeiro {nome} adicionado com acesso ao sistema!', 'success')
     db.commit()
     db.close()
     return redirect(url_for('admin_barbeiros'))
