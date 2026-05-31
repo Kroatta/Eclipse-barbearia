@@ -266,9 +266,9 @@ def index():
         FROM avaliacoes av
         JOIN barbeiros b ON av.barbeiro_id = b.id
         JOIN usuarios u ON av.usuario_id = u.id
-        WHERE av.nota >= 4 AND av.comentario != '' AND LENGTH(TRIM(av.comentario)) > 8
-        ORDER BY av.nota DESC, RANDOM()
-        LIMIT 6
+        WHERE av.nota = 5 AND av.comentario != '' AND LENGTH(TRIM(av.comentario)) > 8
+        ORDER BY RANDOM()
+        LIMIT 5
     """).fetchall()
     db.close()
     depoimentos = [dict(d) for d in depoimentos_raw]
