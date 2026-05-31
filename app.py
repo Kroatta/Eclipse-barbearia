@@ -261,7 +261,7 @@ def index():
         WHERE b.ativo=1
         GROUP BY b.id
     """).fetchall()
-    depoimentos = db.execute("""
+    depoimentos_raw = db.execute("""
         SELECT av.comentario, av.nota, b.nome as barbeiro_nome, u.nome as cliente_nome
         FROM avaliacoes av
         JOIN barbeiros b ON av.barbeiro_id = b.id
@@ -271,6 +271,7 @@ def index():
         LIMIT 6
     """).fetchall()
     db.close()
+    depoimentos = [dict(d) for d in depoimentos_raw]
     return render_template('client/index.html', servicos=servicos, barbeiros=barbeiros, depoimentos=depoimentos)
 
 @app.route('/login', methods=['GET', 'POST'])
