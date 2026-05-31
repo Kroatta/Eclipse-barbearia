@@ -1,20 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Agendar — Barbearia Eclipse{% endblock %}
 {% block body %}
-<!-- HEADER -->
 <header class="bg-background/95 fixed top-0 w-full z-50 border-b border-outline-variant/20 backdrop-blur-md">
   <div class="flex justify-between items-center px-margin-mobile md:px-margin-desktop h-20 max-w-container-max mx-auto">
     <a href="{{ url_for('index') }}" class="font-display text-primary tracking-tighter uppercase text-[24px] md:text-[28px] font-bold hover:opacity-80 transition-opacity">ECLIPSE</a>
-    <nav class="hidden md:flex items-center gap-8">
-      <a href="{{ url_for('index') }}" class="text-on-surface-variant font-body text-[14px] uppercase tracking-widest hover:text-primary transition-colors">Início</a>
-      <a href="{{ url_for('index') }}#servicos" class="text-on-surface-variant font-body text-[14px] uppercase tracking-widest hover:text-primary transition-colors">Serviços</a>
-      <a href="{{ url_for('meus_agendamentos') }}" class="text-on-surface-variant font-body text-[14px] uppercase tracking-widest hover:text-primary transition-colors">Meus Agendamentos</a>
-    </nav>
     <div class="flex items-center gap-3">
       <span class="text-on-surface-variant font-body text-sm hidden md:block">{{ session.user_nome }}</span>
-      {% if session.is_admin %}
-        <a href="{{ url_for('admin_dashboard') }}" class="bg-primary text-on-primary px-4 py-2 font-body text-[13px] uppercase tracking-widest font-bold hover:bg-primary-container transition-all hidden md:block">Painel Admin</a>
-      {% endif %}
+      <a href="{{ url_for('meus_agendamentos') }}" class="text-on-surface-variant font-body text-[13px] uppercase tracking-widest hover:text-primary transition-colors hidden md:block">Meus Agendamentos</a>
       <a href="{{ url_for('logout') }}" class="border border-outline-variant text-on-surface-variant px-4 py-2 font-body text-[13px] uppercase tracking-widest hover:border-primary hover:text-primary transition-all">Sair</a>
     </div>
   </div>
@@ -22,22 +14,32 @@
 
 <main class="pt-28 pb-24 min-h-screen bg-background">
   <div class="max-w-2xl mx-auto px-margin-mobile md:px-0">
-    <div class="mb-12">
+    <div class="mb-10">
       <span class="text-primary font-body text-[14px] uppercase tracking-[0.3em] block mb-4">Reserve sua hora</span>
       <h1 class="font-display text-[40px] text-on-background font-bold">Agendar Serviço</h1>
     </div>
 
-    <div class="bg-surface-container-low border border-outline-variant/20 p-8 md:p-10">
-      <form method="POST" class="space-y-8">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+      <div class="mb-6 px-4 py-3 border font-body text-[13px]
+        {% if cat == 'error' %}border-error/40 text-error bg-error/10{% else %}border-green-500/30 text-green-400 bg-green-500/10{% endif %}">
+        {{ msg }}
+      </div>
+      {% endfor %}
+    {% endwith %}
 
-        <!-- SERVIÇO -->
+    <div class="bg-surface-container-low border border-outline-variant/20 p-8 md:p-10">
+      <form method="POST" id="form-agendar" class="space-y-8">
+
+        <!-- 1. SERVIÇO -->
         <div>
           <label class="block font-body text-[14px] text-on-surface-variant uppercase tracking-widest mb-4">1. Escolha o Serviço *</label>
           <div class="space-y-3">
             {% for s in servicos %}
             <label class="flex items-center justify-between p-4 border border-outline-variant/20 cursor-pointer hover:border-primary/50 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5 group">
               <div class="flex items-center gap-4">
-                <input type="radio" name="servico_id" value="{{ s.id }}" class="accent-[#f2ca50] w-4 h-4" required/>
+                <input type="radio" name="servico_id" value="{{ s.id }}" data-duracao="{{ s.duracao }}"
+                       class="accent-[#f2ca50] w-4 h-4 servico-radio" required onchange="onSelecaoMudou()"/>
                 <div>
                   <p class="font-body text-[16px] text-on-background font-semibold group-[:has(:checked)]:text-primary">{{ s.nome }}</p>
                   <p class="font-body text-[13px] text-on-surface-variant">{{ s.categoria }} • {{ s.duracao }} min</p>
@@ -49,14 +51,15 @@
           </div>
         </div>
 
-        <!-- BARBEIRO -->
+        <!-- 2. BARBEIRO -->
         <div>
           <label class="block font-body text-[14px] text-on-surface-variant uppercase tracking-widest mb-4">2. Escolha o Profissional *</label>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
             {% for b in barbeiros %}
             <label class="flex flex-col items-center p-5 border border-outline-variant/20 cursor-pointer hover:border-primary/50 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5 text-center">
-              <input type="radio" name="barbeiro_id" value="{{ b.id }}" class="accent-[#f2ca50] mb-3" required/>
-              <div class="w-12 h-12 rounded-full bg-outline-variant/20 flex items-center justify-center mb-2">
+              <input type="radio" name="barbeiro_id" value="{{ b.id }}"
+                     class="accent-[#f2ca50] mb-3 barbeiro-radio" required onchange="onSelecaoMudou()"/>
+              <div class="w-12 h-12 bg-outline-variant/20 flex items-center justify-center mb-2">
                 <span class="font-display text-primary text-[20px]">{{ b.nome[0] }}</span>
               </div>
               <p class="font-body text-[15px] text-on-background font-semibold">{{ b.nome.split()[0] }}</p>
@@ -66,25 +69,37 @@
           </div>
         </div>
 
-        <!-- DATA E HORA -->
+        <!-- 3. DATA -->
         <div>
-          <label class="block font-body text-[14px] text-on-surface-variant uppercase tracking-widest mb-2">3. Data e Horário *</label>
-          <input type="datetime-local" name="data_hora" required
-            class="w-full bg-surface-container border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-3 px-0 transition-colors font-body [color-scheme:dark]"/>
+          <label class="block font-body text-[14px] text-on-surface-variant uppercase tracking-widest mb-2">3. Escolha a Data *</label>
+          <input type="date" id="input-data" name="data" required
+                 min="{{ now_date }}"
+                 onchange="carregarHorarios()"
+                 class="w-full bg-surface-container border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-3 px-0 transition-colors font-body [color-scheme:dark]"/>
         </div>
 
-        <!-- OBSERVAÇÕES -->
+        <!-- 4. HORÁRIOS DISPONÍVEIS -->
+        <div id="bloco-horarios" class="hidden">
+          <label class="block font-body text-[14px] text-on-surface-variant uppercase tracking-widest mb-3">4. Horário Disponível *</label>
+          <div id="slots-grid" class="grid grid-cols-4 md:grid-cols-6 gap-2"></div>
+          <input type="hidden" name="hora" id="hora-selecionada" required/>
+          <p id="slots-msg" class="hidden text-on-surface-variant font-body text-[13px] mt-2"></p>
+        </div>
+
+        <!-- 5. OBSERVAÇÕES -->
         <div>
-          <label class="block font-body text-[14px] text-on-surface-variant uppercase tracking-widest mb-2">4. Observações (opcional)</label>
+          <label class="block font-body text-[14px] text-on-surface-variant uppercase tracking-widest mb-2">5. Observações (opcional)</label>
           <textarea name="observacoes" rows="3" placeholder="Ex: Prefiro fade alto, trazer referência..."
             class="w-full bg-surface-container border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-3 px-0 transition-colors resize-none placeholder:text-outline-variant font-body"></textarea>
         </div>
 
         <div class="pt-4 flex flex-col sm:flex-row gap-4">
-          <button type="submit" class="flex-1 bg-primary text-on-primary py-4 font-body tracking-widest uppercase font-bold hover:bg-primary-container transition-all active:scale-95">
+          <button type="submit"
+                  class="flex-1 bg-primary text-on-primary py-4 font-body tracking-widest uppercase font-bold hover:bg-primary-container transition-all active:scale-95">
             CONFIRMAR AGENDAMENTO
           </button>
-          <a href="{{ url_for('index') }}" class="flex-1 border border-outline-variant text-on-surface-variant py-4 font-body tracking-widest uppercase text-center hover:border-primary hover:text-primary transition-all">
+          <a href="{{ url_for('index') }}"
+             class="flex-1 border border-outline-variant text-on-surface-variant py-4 font-body tracking-widest uppercase text-center hover:border-primary hover:text-primary transition-all">
             CANCELAR
           </a>
         </div>
@@ -92,4 +107,68 @@
     </div>
   </div>
 </main>
+
+<script>
+function onSelecaoMudou() {
+  const data = document.getElementById('input-data').value;
+  if (data) carregarHorarios();
+}
+
+function carregarHorarios() {
+  const barbeiroId = document.querySelector('input[name="barbeiro_id"]:checked')?.value;
+  const servicoId  = document.querySelector('input[name="servico_id"]:checked')?.value;
+  const data       = document.getElementById('input-data').value;
+  const bloco      = document.getElementById('bloco-horarios');
+  const grid       = document.getElementById('slots-grid');
+  const msg        = document.getElementById('slots-msg');
+
+  document.getElementById('hora-selecionada').value = '';
+
+  if (!barbeiroId || !servicoId || !data) {
+    bloco.classList.add('hidden');
+    return;
+  }
+
+  bloco.classList.remove('hidden');
+  grid.innerHTML = '<p class="col-span-6 text-on-surface-variant font-body text-[13px]">Buscando horários...</p>';
+  msg.classList.add('hidden');
+
+  fetch(`/api/horarios-disponiveis?barbeiro_id=${barbeiroId}&servico_id=${servicoId}&data=${data}`)
+    .then(r => r.json())
+    .then(slots => {
+      const disponiveis = slots.filter(s => s.disponivel);
+      if (!slots.length) {
+        grid.innerHTML = '';
+        msg.textContent = 'Nenhum horário disponível nesta data.';
+        msg.classList.remove('hidden');
+        return;
+      }
+      grid.innerHTML = slots.map(s => `
+        <button type="button"
+          onclick="selecionarHora('${s.hora}', this)"
+          ${!s.disponivel ? 'disabled' : ''}
+          class="py-2 px-1 font-body text-[13px] border transition-all
+            ${s.disponivel
+              ? 'border-outline-variant/40 text-on-surface hover:border-primary hover:text-primary cursor-pointer'
+              : 'border-outline-variant/10 text-on-surface-variant/30 cursor-not-allowed line-through'}">
+          ${s.hora}
+        </button>
+      `).join('');
+      if (!disponiveis.length) {
+        msg.textContent = 'Todos os horários desta data estão ocupados.';
+        msg.classList.remove('hidden');
+      }
+    });
+}
+
+function selecionarHora(hora, btn) {
+  document.querySelectorAll('#slots-grid button').forEach(b => {
+    b.classList.remove('bg-primary', 'text-on-primary', 'border-primary');
+    b.classList.add('border-outline-variant/40', 'text-on-surface');
+  });
+  btn.classList.add('bg-primary', 'text-on-primary', 'border-primary');
+  btn.classList.remove('border-outline-variant/40', 'text-on-surface');
+  document.getElementById('hora-selecionada').value = hora;
+}
+</script>
 {% endblock %}

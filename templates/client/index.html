@@ -151,30 +151,82 @@
 <!-- DEPOIMENTOS -->
 <section class="bg-surface-container-low py-24 overflow-hidden">
   <div class="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
-    <div class="mb-16">
+    <div class="mb-12">
       <span class="text-primary font-body text-[14px] uppercase tracking-[0.3em] block mb-4">Experiência Eclipse</span>
       <h3 class="font-display text-[32px] text-on-background font-semibold">O que dizem nossos clientes</h3>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
-      {% for depo in [
-        ("Ambiente impecável e atendimento de primeira. O Ricardo tem uma mão incrível para o corte clássico. Me senti em um clube exclusivo.", "André Santos", "Cliente Platinum"),
-        ("A melhor barba que já fiz. O ritual da toalha quente é relaxante e o acabamento do Fabio é milimétrico. Recomendo fortemente.", "Marcelo Oliveira", "Executivo")
-      ] %}
-      <div class="relative p-12 bg-surface-container border border-outline-variant/5">
-        <span class="material-symbols-outlined text-primary/30 text-[64px] absolute top-8 right-8 fill-icon">format_quote</span>
-        <p class="font-body text-[18px] text-on-background italic mb-8 relative z-10 leading-relaxed">"{{ depo[0] }}"</p>
-        <div class="flex items-center gap-4">
-          <div class="w-12 h-12 bg-outline-variant/20 rounded-full flex items-center justify-center font-display text-primary text-[20px]">{{ depo[1][0] }}</div>
-          <div>
-            <p class="font-body text-[14px] text-on-background uppercase font-semibold">{{ depo[1] }}</p>
-            <span class="font-body text-[12px] text-on-tertiary-container uppercase tracking-tighter">{{ depo[2] }}</span>
+
+    {% set static_depos = [
+      ("Ambiente impecável e atendimento de primeira. Me senti em um clube exclusivo.", "André Santos", "Cliente"),
+      ("A melhor barba que já fiz. O ritual da toalha quente é relaxante e o acabamento é milimétrico.", "Marcelo Oliveira", "Cliente")
+    ] %}
+
+    <div class="relative" id="carousel-wrap">
+      <div id="carousel" class="transition-all duration-700 ease-in-out">
+        <!-- slide ativo -->
+        <div id="slide-atual" class="relative p-10 md:p-12 bg-surface-container border border-outline-variant/5 max-w-3xl mx-auto">
+          <span class="material-symbols-outlined text-primary/20 text-[72px] absolute top-6 right-8 fill-icon">format_quote</span>
+          <p id="depo-texto" class="font-body text-[18px] md:text-[20px] text-on-background italic mb-8 relative z-10 leading-relaxed"></p>
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-primary/10 border border-primary/20 flex items-center justify-center font-display text-primary text-[20px]" id="depo-inicial"></div>
+            <div>
+              <p class="font-body text-[14px] text-on-background uppercase font-semibold" id="depo-nome"></p>
+              <div class="flex gap-0.5 mt-1" id="depo-estrelas"></div>
+            </div>
           </div>
         </div>
       </div>
-      {% endfor %}
+      <!-- Indicadores -->
+      <div id="dots" class="flex justify-center gap-2 mt-6"></div>
     </div>
   </div>
 </section>
+
+<script>
+(function() {
+  const reais = {{ depoimentos | tojson }};
+  const estaticos = [
+    {comentario: "Ambiente impecável e atendimento de primeira. Me senti em um clube exclusivo.", cliente_nome: "André Santos", nota: 5, barbeiro_nome: ""},
+    {comentario: "A melhor barba que já fiz. O ritual da toalha quente é relaxante e o acabamento é milimétrico.", cliente_nome: "Marcelo Oliveira", nota: 5, barbeiro_nome: ""}
+  ];
+  const todos = reais.length >= 2 ? reais : [...reais, ...estaticos].slice(0, 6);
+  let idx = 0;
+
+  function render(i) {
+    const d = todos[i];
+    document.getElementById('depo-texto').textContent = `"${d.comentario}"`;
+    document.getElementById('depo-nome').textContent = d.cliente_nome || 'Cliente';
+    document.getElementById('depo-inicial').textContent = (d.cliente_nome || 'C')[0];
+    const stars = document.getElementById('depo-estrelas');
+    stars.innerHTML = Array.from({length:5}, (_,k) =>
+      `<span class="material-symbols-outlined text-[16px] ${k < d.nota ? 'text-primary fill-icon' : 'text-outline'}">star</span>`
+    ).join('');
+    document.querySelectorAll('.dot').forEach((dot, j) => {
+      dot.classList.toggle('bg-primary', j === i);
+      dot.classList.toggle('bg-outline-variant', j !== i);
+    });
+  }
+
+  function buildDots() {
+    const c = document.getElementById('dots');
+    c.innerHTML = todos.map((_, i) =>
+      `<button class="dot w-2 h-2 rounded-full transition-all ${i===0?'bg-primary':'bg-outline-variant'}" onclick="goTo(${i})"></button>`
+    ).join('');
+  }
+
+  window.goTo = function(i) { idx = i; render(idx); };
+
+  if (todos.length > 0) {
+    buildDots();
+    render(0);
+    if (todos.length > 1) {
+      setInterval(() => { idx = (idx + 1) % todos.length; render(idx); }, 5000);
+    }
+  } else {
+    document.getElementById('carousel-wrap').closest('section').style.display = 'none';
+  }
+})();
+</script>
 
 <!-- FOOTER -->
 <footer class="bg-surface-container-lowest py-16 border-t border-outline-variant/10">

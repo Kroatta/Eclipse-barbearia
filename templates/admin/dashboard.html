@@ -133,6 +133,17 @@
   </div>
 </div>
 
+<!-- AVALIAÇÕES POR BARBEIRO -->
+<div class="bg-surface-container-low border border-outline-variant/20 p-6 mb-6">
+  <div class="flex items-center justify-between mb-4">
+    <h3 class="font-body text-[14px] text-on-background font-semibold uppercase tracking-wider">Avaliação dos Profissionais</h3>
+    <span class="material-symbols-outlined text-primary/30 text-[24px]">star</span>
+  </div>
+  <div id="avaliacoes-barbeiros" class="space-y-3">
+    <p class="text-on-surface-variant font-body text-[13px]">Carregando...</p>
+  </div>
+</div>
+
 <!-- AGENDAMENTOS RECENTES -->
 <div class="bg-surface-container-low border border-outline-variant/20 p-6">
   <div class="flex items-center justify-between mb-4">
@@ -297,6 +308,29 @@ function loadPeriod(p) {
     });
   });
 }
+
+// Avaliações por barbeiro
+fetch('/api/graficos/avaliacoes-barbeiros').then(r=>r.json()).then(data=>{
+  const el = document.getElementById('avaliacoes-barbeiros');
+  if(!data.length){el.innerHTML='<p class="text-on-surface-variant font-body text-[13px]">Nenhuma avaliação ainda.</p>';return;}
+  el.innerHTML = data.map(d=>{
+    const media = parseFloat(d.media)||0;
+    const stars = Array.from({length:5},(_,i)=>
+      `<span class="material-symbols-outlined text-[16px] ${i<Math.round(media)?'text-primary fill-icon':'text-outline'}">star</span>`
+    ).join('');
+    return `<div class="flex items-center justify-between py-2 border-b border-outline-variant/10">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-surface-container flex items-center justify-center border border-outline-variant/20 font-display text-primary text-[13px]">${d.nome[0]}</div>
+        <span class="font-body text-[14px] text-on-background font-semibold">${d.nome.split(' ')[0]}</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="flex">${stars}</div>
+        <span class="font-body text-[13px] text-primary font-bold">${media>0?media.toFixed(1):'—'}</span>
+        <span class="font-body text-[11px] text-on-surface-variant">(${d.total})</span>
+      </div>
+    </div>`;
+  }).join('');
+});
 
 function setPeriod(p) {
   document.querySelectorAll('.period-btn').forEach(b=>{b.classList.remove('active-period');b.classList.add('text-[#d0c5af]');});

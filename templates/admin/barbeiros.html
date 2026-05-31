@@ -151,6 +151,22 @@
         <input type="text" name="bio" placeholder="Resumo profissional..."
           class="w-full bg-surface-container-low border-0 border-b border-outline focus:border-primary focus:ring-0 text-on-surface py-2 px-0 font-body placeholder:text-outline-variant"/>
       </div>
+      <!-- Acesso ao sistema (opcional) -->
+      <div class="md:col-span-2 border-t border-outline-variant/20 pt-4">
+        <p class="font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-3">Acesso ao Sistema <span class="normal-case text-outline-variant">(opcional — para que o profissional faça login)</span></p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Email de Login</label>
+            <input type="email" name="email" placeholder="profissional@exemplo.com"
+              class="w-full bg-surface-container-low border-0 border-b border-outline focus:border-primary focus:ring-0 text-on-surface py-2 px-0 font-body placeholder:text-outline-variant"/>
+          </div>
+          <div>
+            <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Senha</label>
+            <input type="password" name="senha" placeholder="Mínimo 6 caracteres"
+              class="w-full bg-surface-container-low border-0 border-b border-outline focus:border-primary focus:ring-0 text-on-surface py-2 px-0 font-body placeholder:text-outline-variant"/>
+          </div>
+        </div>
+      </div>
       <div class="md:col-span-2 pt-4 flex gap-3 justify-end">
         <button type="button" onclick="document.getElementById('modal-novo').classList.add('hidden')"
           class="px-8 py-3 font-body text-[14px] font-bold border border-outline-variant text-on-surface uppercase tracking-widest hover:bg-surface-variant transition-colors">

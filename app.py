@@ -274,8 +274,17 @@ def index():
         WHERE b.ativo=1
         GROUP BY b.id
     """).fetchall()
+    depoimentos = db.execute("""
+        SELECT av.comentario, av.nota, b.nome as barbeiro_nome, u.nome as cliente_nome
+        FROM avaliacoes av
+        JOIN barbeiros b ON av.barbeiro_id = b.id
+        JOIN usuarios u ON av.usuario_id = u.id
+        WHERE av.nota >= 4 AND av.comentario != '' AND LENGTH(TRIM(av.comentario)) > 8
+        ORDER BY av.nota DESC, RANDOM()
+        LIMIT 6
+    """).fetchall()
     db.close()
-    return render_template('client/index.html', servicos=servicos, barbeiros=barbeiros)
+    return render_template('client/index.html', servicos=servicos, barbeiros=barbeiros, depoimentos=depoimentos)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -419,12 +428,38 @@ def agendar():
     if request.method == 'POST':
         servico_id = request.form.get('servico_id')
         barbeiro_id = request.form.get('barbeiro_id')
-        data_hora = request.form.get('data_hora')
+        data = request.form.get('data', '')
+        hora = request.form.get('hora', '')
         observacoes = request.form.get('observacoes', '')
-        if not all([servico_id, barbeiro_id, data_hora]):
-            flash('Preencha todos os campos.', 'error')
+        if not all([servico_id, barbeiro_id, data, hora]):
+            flash('Preencha todos os campos obrigatórios.', 'error')
             db.close()
             return render_template('client/agendar.html', servicos=servicos, barbeiros=barbeiros)
+        data_hora = f"{data} {hora}"
+        try:
+            data_hora_dt = datetime.strptime(data_hora, '%Y-%m-%d %H:%M')
+        except ValueError:
+            flash('Data ou horário inválido.', 'error')
+            db.close()
+            return render_template('client/agendar.html', servicos=servicos, barbeiros=barbeiros)
+        servico = db.execute("SELECT duracao FROM servicos WHERE id=?", (servico_id,)).fetchone()
+        if not servico:
+            flash('Serviço inválido.', 'error')
+            db.close()
+            return render_template('client/agendar.html', servicos=servicos, barbeiros=barbeiros)
+        novo_fim = data_hora_dt + timedelta(minutes=servico['duracao'])
+        conflitos = db.execute("""
+            SELECT a.data_hora, s.duracao
+            FROM agendamentos a JOIN servicos s ON a.servico_id=s.id
+            WHERE a.barbeiro_id=? AND date(a.data_hora)=? AND a.status!='cancelado'
+        """, (barbeiro_id, data)).fetchall()
+        for c in conflitos:
+            c_start = datetime.strptime(c['data_hora'], '%Y-%m-%d %H:%M')
+            c_end = c_start + timedelta(minutes=c['duracao'])
+            if data_hora_dt < c_end and novo_fim > c_start:
+                flash(f'Horário indisponível. O profissional está ocupado das {c_start.strftime("%H:%M")} às {c_end.strftime("%H:%M")}. Escolha outro horário.', 'error')
+                db.close()
+                return render_template('client/agendar.html', servicos=servicos, barbeiros=barbeiros)
         db.execute("""
             INSERT INTO agendamentos (usuario_id, barbeiro_id, servico_id, data_hora, observacoes)
             VALUES (?,?,?,?,?)
@@ -433,8 +468,10 @@ def agendar():
         db.close()
         flash('Agendamento realizado com sucesso!', 'success')
         return redirect(url_for('meus_agendamentos'))
+    from datetime import date as _date
     db.close()
-    return render_template('client/agendar.html', servicos=servicos, barbeiros=barbeiros)
+    return render_template('client/agendar.html', servicos=servicos, barbeiros=barbeiros,
+                           now_date=_date.today().isoformat())
 
 @app.route('/meus-agendamentos')
 @login_required
@@ -688,13 +725,27 @@ def admin_barbeiro_novo():
     especialidade = request.form.get('especialidade', '').strip()
     bio = request.form.get('bio', '').strip()
     nivel = request.form.get('nivel', 'Pleno')
-    if nome and especialidade:
-        db = get_db()
-        db.execute("INSERT INTO barbeiros (nome, especialidade, bio, nivel) VALUES (?,?,?,?)",
-                   (nome, especialidade, bio, nivel))
-        db.commit()
-        db.close()
+    email = request.form.get('email', '').strip()
+    senha = request.form.get('senha', '')
+    if not nome or not especialidade:
+        flash('Nome e especialidade são obrigatórios.', 'error')
+        return redirect(url_for('admin_barbeiros'))
+    db = get_db()
+    cursor = db.execute("INSERT INTO barbeiros (nome, especialidade, bio, nivel) VALUES (?,?,?,?)",
+                        (nome, especialidade, bio, nivel))
+    barb_id = cursor.lastrowid
+    if email and senha:
+        if db.execute("SELECT id FROM usuarios WHERE email=?", (email,)).fetchone():
+            flash('Barbeiro adicionado, mas o email já está em uso — acesso não criado.', 'error')
+        else:
+            cur2 = db.execute("INSERT INTO usuarios (nome, email, senha, is_funcionario) VALUES (?,?,?,1)",
+                              (nome, email, generate_password_hash(senha)))
+            db.execute("UPDATE barbeiros SET usuario_id=? WHERE id=?", (cur2.lastrowid, barb_id))
+            flash(f'Barbeiro {nome} adicionado com acesso ao sistema!', 'success')
+    else:
         flash('Barbeiro adicionado!', 'success')
+    db.commit()
+    db.close()
     return redirect(url_for('admin_barbeiros'))
 
 @app.route('/admin/barbeiros/editar/<int:id>', methods=['POST'])
@@ -847,16 +898,7 @@ def admin_estoque_excluir(id):
 @app.route('/admin/funcionarios')
 @admin_required
 def admin_funcionarios():
-    db = get_db()
-    funcionarios = db.execute("""
-        SELECT u.id, u.nome, u.email, b.especialidade
-        FROM usuarios u
-        LEFT JOIN barbeiros b ON b.usuario_id = u.id
-        WHERE u.is_funcionario = 1
-        ORDER BY u.nome
-    """).fetchall()
-    db.close()
-    return render_template('admin/funcionarios.html', funcionarios=funcionarios)
+    return redirect(url_for('admin_barbeiros'))
 
 @app.route('/admin/funcionarios/novo', methods=['POST'])
 @admin_required
@@ -876,8 +918,12 @@ def admin_funcionario_novo():
     cursor = db.execute("INSERT INTO usuarios (nome, email, senha, is_funcionario) VALUES (?,?,?,1)",
                         (nome, email, generate_password_hash(senha)))
     novo_id = cursor.lastrowid
-    db.execute("INSERT INTO barbeiros (nome, especialidade, usuario_id) VALUES (?,?,?)",
-               (nome, especialidade, novo_id))
+    existing_barb = db.execute("SELECT id FROM barbeiros WHERE nome=? AND ativo=1", (nome,)).fetchone()
+    if existing_barb:
+        db.execute("UPDATE barbeiros SET usuario_id=? WHERE id=?", (novo_id, existing_barb['id']))
+    else:
+        db.execute("INSERT INTO barbeiros (nome, especialidade, usuario_id) VALUES (?,?,?)",
+                   (nome, especialidade or 'Barbeiro', novo_id))
     db.commit()
     db.close()
     flash(f'Funcionario {nome} criado com sucesso!', 'success')
@@ -1160,6 +1206,56 @@ def admin_relatorio():
         receita=receita, clientes=clientes, barbeiros=barbeiros,
         servicos_pop=servicos_pop, barbeiros_rank=barbeiros_rank,
         produtos_uso=produtos_uso, hoje=date.today().strftime('%d/%m/%Y'))
+
+@app.route('/api/horarios-disponiveis')
+@login_required
+def api_horarios_disponiveis():
+    barbeiro_id = request.args.get('barbeiro_id', type=int)
+    data = request.args.get('data', '')
+    servico_id = request.args.get('servico_id', type=int)
+    if not all([barbeiro_id, data, servico_id]):
+        return jsonify([])
+    db = get_db()
+    servico = db.execute("SELECT duracao FROM servicos WHERE id=?", (servico_id,)).fetchone()
+    if not servico:
+        db.close()
+        return jsonify([])
+    dur_nova = servico['duracao']
+    ocupados = db.execute("""
+        SELECT a.data_hora, s.duracao
+        FROM agendamentos a JOIN servicos s ON a.servico_id=s.id
+        WHERE a.barbeiro_id=? AND date(a.data_hora)=? AND a.status!='cancelado'
+    """, (barbeiro_id, data)).fetchall()
+    db.close()
+    busy = []
+    for ag in ocupados:
+        s = datetime.strptime(ag['data_hora'], '%Y-%m-%d %H:%M')
+        busy.append((s, s + timedelta(minutes=ag['duracao'])))
+    slots = []
+    base = datetime.strptime(f"{data} 08:00", '%Y-%m-%d %H:%M')
+    fim_dia = datetime.strptime(f"{data} 20:00", '%Y-%m-%d %H:%M')
+    cur = base
+    while cur + timedelta(minutes=dur_nova) <= fim_dia + timedelta(minutes=1):
+        slot_fim = cur + timedelta(minutes=dur_nova)
+        disponivel = all(not (cur < b_end and slot_fim > b_start) for b_start, b_end in busy)
+        slots.append({'hora': cur.strftime('%H:%M'), 'disponivel': disponivel})
+        cur += timedelta(minutes=30)
+    return jsonify(slots)
+
+@app.route('/api/graficos/avaliacoes-barbeiros')
+@admin_required
+def api_avaliacoes_barbeiros():
+    db = get_db()
+    dados = db.execute("""
+        SELECT b.nome, ROUND(COALESCE(AVG(av.nota), 0), 1) as media, COUNT(av.id) as total
+        FROM barbeiros b
+        LEFT JOIN avaliacoes av ON av.barbeiro_id = b.id
+        WHERE b.ativo = 1
+        GROUP BY b.id, b.nome
+        ORDER BY media DESC
+    """).fetchall()
+    db.close()
+    return jsonify([dict(r) for r in dados])
 
 @app.route('/api/graficos/produtos-barbeiros')
 @admin_required
