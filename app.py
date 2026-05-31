@@ -555,7 +555,7 @@ def funcionario_agenda():
                    COALESCE(a.nome_avulso, u.nome) as usuario_nome
             FROM agendamentos a
             JOIN servicos s ON a.servico_id = s.id
-            JOIN usuarios u ON a.usuario_id = u.id
+            LEFT JOIN usuarios u ON a.usuario_id = u.id
             WHERE a.barbeiro_id = ?
             ORDER BY a.data_hora DESC
         """, (barbeiro['id'],)).fetchall()
