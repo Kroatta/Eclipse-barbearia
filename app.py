@@ -495,9 +495,9 @@ def avaliar(agendamento_id):
         flash('Selecione uma nota de 1 a 5.', 'error')
         return redirect(url_for('meus_agendamentos'))
     db = get_db()
-    ag = db.execute("SELECT * FROM agendamentos WHERE id=? AND usuario_id=?",
+    ag = db.execute("SELECT * FROM agendamentos WHERE id=? AND usuario_id=? AND status='concluido'",
                     (agendamento_id, session['user_id'])).fetchone()
-    if not ag or ag['data_hora'] >= datetime.now().strftime('%Y-%m-%d %H:%M'):
+    if not ag:
         db.close()
         flash('Agendamento invalido para avaliacao.', 'error')
         return redirect(url_for('meus_agendamentos'))
