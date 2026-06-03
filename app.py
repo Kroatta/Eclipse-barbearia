@@ -123,6 +123,18 @@ def init_db():
         );
     ''')
 
+    # Migrações para bancos existentes (garante colunas novas em DBs antigos)
+    for sql in [
+        "ALTER TABLE usuarios ADD COLUMN is_funcionario INTEGER DEFAULT 0",
+        "ALTER TABLE barbeiros ADD COLUMN usuario_id INTEGER",
+        "ALTER TABLE agendamentos ADD COLUMN nome_avulso TEXT",
+    ]:
+        try:
+            c.execute(sql)
+        except Exception:
+            pass
+    conn.commit()
+
     # Seed admin
     admin = c.execute("SELECT id FROM usuarios WHERE email='admin@eclipse.com'").fetchone()
     if not admin:
@@ -193,15 +205,6 @@ def init_db():
                 c.execute("INSERT INTO uso_produtos (produto_id, usuario_id, quantidade, observacao, criado_em) VALUES (?,?,?,?,?)",
                           (random.choice(prods)[0], random.choice(funcs)[0],
                            random.randint(1, 3), random.choice(obs_lista), data))
-
-    # Migrações para bancos existentes (anteriores à refatoração)
-    for sql in [
-        "ALTER TABLE agendamentos ADD COLUMN nome_avulso TEXT",
-    ]:
-        try:
-            c.execute(sql)
-        except Exception:
-            pass
 
     conn.commit()
     conn.close()
