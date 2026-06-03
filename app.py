@@ -191,20 +191,6 @@ def init_db():
         ]
         c.executemany("INSERT INTO produtos (nome, descricao, quantidade, unidade) VALUES (?,?,?,?)", produtos)
 
-    # Seed retiradas de exemplo
-    if not c.execute("SELECT id FROM uso_produtos LIMIT 1").fetchone():
-        import random
-        from datetime import datetime, timedelta
-        funcs = c.execute("SELECT id FROM usuarios WHERE is_funcionario=1").fetchall()
-        prods = c.execute("SELECT id FROM produtos").fetchall()
-        if funcs and prods:
-            obs_lista = ['Usado no cliente', 'Servico de barba', 'Corte + barba', 'Finalizacao', '']
-            for _ in range(35):
-                dias_atras = random.randint(0, 30)
-                data = (datetime.now() - timedelta(days=dias_atras)).strftime('%Y-%m-%d %H:%M')
-                c.execute("INSERT INTO uso_produtos (produto_id, usuario_id, quantidade, observacao, criado_em) VALUES (?,?,?,?,?)",
-                          (random.choice(prods)[0], random.choice(funcs)[0],
-                           random.randint(1, 3), random.choice(obs_lista), data))
 
     conn.commit()
     conn.close()
