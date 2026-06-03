@@ -22,7 +22,7 @@ Sistema web desenvolvido como Trabalho de Conclusão de Curso (TCC), implementan
 - Python 3.8 ou superior
 - pip (gerenciador de pacotes Python)
 
-### Instalação
+### Instalação.
 
 ```bash
 # 1. Clone o repositório
