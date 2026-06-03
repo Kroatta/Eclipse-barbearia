@@ -47,6 +47,7 @@ def init_db():
             senha TEXT NOT NULL,
             telefone TEXT,
             is_admin INTEGER DEFAULT 0,
+            is_funcionario INTEGER DEFAULT 0,
             criado_em TEXT DEFAULT (datetime('now','localtime'))
         );
 
