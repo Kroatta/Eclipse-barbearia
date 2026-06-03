@@ -58,7 +58,8 @@ def init_db():
             bio TEXT,
             nivel TEXT DEFAULT 'Pleno',
             foto TEXT DEFAULT '',
-            ativo INTEGER DEFAULT 1
+            ativo INTEGER DEFAULT 1,
+            usuario_id INTEGER
         );
 
         CREATE TABLE IF NOT EXISTS servicos (
@@ -73,7 +74,7 @@ def init_db():
 
         CREATE TABLE IF NOT EXISTS agendamentos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            usuario_id INTEGER NOT NULL,
+            usuario_id INTEGER,
             barbeiro_id INTEGER NOT NULL,
             servico_id INTEGER NOT NULL,
             data_hora TEXT NOT NULL,
@@ -193,11 +194,9 @@ def init_db():
                           (random.choice(prods)[0], random.choice(funcs)[0],
                            random.randint(1, 3), random.choice(obs_lista), data))
 
-    # Migrações para bancos existentes
+    # Migrações para bancos existentes (anteriores à refatoração)
     for sql in [
         "ALTER TABLE agendamentos ADD COLUMN nome_avulso TEXT",
-        "ALTER TABLE usuarios ADD COLUMN is_funcionario INTEGER DEFAULT 0",
-        "ALTER TABLE barbeiros ADD COLUMN usuario_id INTEGER",
     ]:
         try:
             c.execute(sql)
