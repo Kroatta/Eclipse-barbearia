@@ -13,7 +13,7 @@ from datetime import datetime, date, timedelta
 from functools import wraps
 
 app = Flask(__name__)
-app.secret_key = 'eclipse_barbearia_tcc_2024_secret_key'
+app.secret_key = os.environ.get('SECRET_KEY', 'eclipse_barbearia_tcc_2024_secret_key')
 
 # ─── EMAIL ───────────────────────────────────────────────────────────────────
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
