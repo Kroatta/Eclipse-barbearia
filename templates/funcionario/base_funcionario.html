@@ -6,8 +6,8 @@
   <div id="sidebar-overlay" onclick="toggleSidebar()" class="hidden fixed inset-0 bg-black/60 z-40 md:hidden"></div>
 
   <!-- SIDEBAR -->
-  <aside id="sidebar" class="fixed left-0 top-0 h-full flex flex-col bg-surface-container-low w-64 border-r border-outline-variant z-50
-    -translate-x-full md:translate-x-0 transition-transform duration-300">
+  <aside id="sidebar" class="fixed left-0 top-0 h-full flex flex-col bg-surface-container-low w-64 border-r border-outline-variant z-50 transition-all duration-300"
+    style="transform: translateX(-100%)">
     <div class="p-6 flex items-center justify-between">
       <div>
         <h1 class="font-display text-[22px] font-bold text-primary tracking-widest uppercase">ECLIPSE</h1>
@@ -54,11 +54,30 @@
   </div>
 </div>
 <script>
+const sidebar = document.getElementById('sidebar');
+const overlay = document.getElementById('sidebar-overlay');
+
+if (window.innerWidth >= 768) {
+  sidebar.style.transform = 'translateX(0)';
+}
+window.addEventListener('resize', () => {
+  if (window.innerWidth >= 768) {
+    sidebar.style.transform = 'translateX(0)';
+    overlay.classList.add('hidden');
+  } else if (overlay.classList.contains('hidden')) {
+    sidebar.style.transform = 'translateX(-100%)';
+  }
+});
+
 function toggleSidebar() {
-  const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('sidebar-overlay');
-  sidebar.classList.toggle('-translate-x-full');
-  overlay.classList.toggle('hidden');
+  const isOpen = sidebar.style.transform === 'translateX(0px)' || sidebar.style.transform === 'translateX(0)';
+  if (isOpen) {
+    sidebar.style.transform = 'translateX(-100%)';
+    overlay.classList.add('hidden');
+  } else {
+    sidebar.style.transform = 'translateX(0)';
+    overlay.classList.remove('hidden');
+  }
 }
 </script>
 {% endblock %}
