@@ -21,6 +21,14 @@
   .fc { color: #e5e2e1; font-family: 'Hanken Grotesk', sans-serif; }
   .fc .fc-toolbar-title { font-family: 'Playfair Display', serif; font-size: 22px; color: #f2ca50; }
   .fc .fc-button { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; padding: 6px 14px; border-radius: 0; }
+  @media (max-width: 640px) {
+    .fc .fc-toolbar { flex-direction: column; gap: 8px; align-items: flex-start; }
+    .fc .fc-toolbar-title { font-size: 16px; }
+    .fc .fc-button { font-size: 11px; padding: 5px 8px; }
+    .fc .fc-daygrid-day-number { font-size: 11px; }
+    .fc .fc-col-header-cell-cushion { font-size: 11px; }
+    .fc .fc-event { font-size: 10px; }
+  }
   .fc .fc-button-active { color: #131313 !important; }
   .fc th { color: #d0c5af; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; padding: 10px 0; border-color: rgba(77,70,53,0.3); }
   .fc td { border-color: rgba(77,70,53,0.2); }
@@ -197,10 +205,15 @@ let calendarGlobal = null;
 
 document.addEventListener('DOMContentLoaded', function () {
   const calendarEl = document.getElementById('calendar');
+  const isMobile = window.innerWidth < 640;
   calendarGlobal = new FullCalendar.Calendar(calendarEl, {
-    initialView: 'dayGridMonth',
+    initialView: isMobile ? 'listMonth' : 'dayGridMonth',
     locale: 'pt-br',
-    headerToolbar: {
+    headerToolbar: isMobile ? {
+      left: 'prev,next',
+      center: 'title',
+      right: 'dayGridMonth,listMonth'
+    } : {
       left: 'prev,next today',
       center: 'title',
       right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
