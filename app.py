@@ -121,6 +121,11 @@ def init_db():
             FOREIGN KEY(barbeiro_id) REFERENCES barbeiros(id),
             FOREIGN KEY(agendamento_id) REFERENCES agendamentos(id)
         );
+
+        CREATE TABLE IF NOT EXISTS configuracoes (
+            chave TEXT PRIMARY KEY,
+            valor TEXT
+        );
     ''')
 
     # Migrações para bancos existentes (garante colunas novas em DBs antigos)
@@ -259,9 +264,11 @@ def index():
         ORDER BY RANDOM()
         LIMIT 5
     """).fetchall()
+    config_rows = db.execute("SELECT chave, valor FROM configuracoes").fetchall()
+    config = {r['chave']: r['valor'] for r in config_rows}
     db.close()
     depoimentos = [dict(d) for d in depoimentos_raw]
-    return render_template('client/index.html', servicos=servicos, barbeiros=barbeiros, depoimentos=depoimentos)
+    return render_template('client/index.html', servicos=servicos, barbeiros=barbeiros, depoimentos=depoimentos, config=config)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -635,8 +642,22 @@ def admin_dashboard():
 def admin_servicos():
     db = get_db()
     servicos = db.execute("SELECT * FROM servicos ORDER BY categoria, nome").fetchall()
+    config_rows = db.execute("SELECT chave, valor FROM configuracoes").fetchall()
+    config = {r['chave']: r['valor'] for r in config_rows}
     db.close()
-    return render_template('admin/servicos.html', servicos=servicos)
+    return render_template('admin/servicos.html', servicos=servicos, config=config)
+
+@app.route('/admin/configuracoes/salvar', methods=['POST'])
+@admin_required
+def admin_config_salvar():
+    db = get_db()
+    for chave in ['whatsapp_url', 'instagram_url', 'tiktok_url', 'endereco']:
+        valor = request.form.get(chave, '').strip()
+        db.execute("INSERT OR REPLACE INTO configuracoes (chave, valor) VALUES (?, ?)", (chave, valor))
+    db.commit()
+    db.close()
+    flash('Configurações salvas com sucesso!', 'success')
+    return redirect(url_for('admin_servicos'))
 
 @app.route('/admin/servicos/novo', methods=['POST'])
 @admin_required
