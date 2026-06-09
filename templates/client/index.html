@@ -10,10 +10,10 @@
       <h1 class="font-display text-primary tracking-tighter uppercase text-[24px] md:text-[32px] font-bold">ECLIPSE</h1>
     </div>
     <nav class="hidden md:flex items-center gap-8">
-      <a href="#inicio" class="text-primary font-bold border-b-2 border-primary pb-1 font-body text-[14px] uppercase tracking-widest">Início</a>
-      <a href="#servicos" class="text-on-surface-variant font-body text-[14px] uppercase tracking-widest hover:text-primary transition-colors">Serviços</a>
-      <a href="#equipe" class="text-on-surface-variant font-body text-[14px] uppercase tracking-widest hover:text-primary transition-colors">Profissionais</a>
-      <a href="#agendar" class="text-on-surface-variant font-body text-[14px] uppercase tracking-widest hover:text-primary transition-colors">Agendar</a>
+      <a id="nav-inicio" href="#inicio" class="nav-link font-body text-[14px] uppercase tracking-widest transition-colors">Início</a>
+      <a id="nav-servicos" href="#servicos" class="nav-link font-body text-[14px] uppercase tracking-widest transition-colors">Serviços</a>
+      <a id="nav-equipe" href="#equipe" class="nav-link font-body text-[14px] uppercase tracking-widest transition-colors">Profissionais</a>
+      <a id="nav-agendar" href="#agendar" class="nav-link font-body text-[14px] uppercase tracking-widest transition-colors">Agendar</a>
     </nav>
     <div class="flex items-center gap-3">
       {% if session.user_id %}
@@ -67,6 +67,47 @@ function toggleMobileMenu() {
     btn.textContent = 'menu';
   }
 }
+
+// Nav ativa conforme seção visível
+(function() {
+  const links = {
+    inicio:   document.getElementById('nav-inicio'),
+    servicos: document.getElementById('nav-servicos'),
+    equipe:   document.getElementById('nav-equipe'),
+    agendar:  document.getElementById('nav-agendar'),
+  };
+
+  function setActive(id) {
+    Object.entries(links).forEach(([key, el]) => {
+      if (!el) return;
+      if (key === id) {
+        el.style.color = '#f2ca50';
+        el.style.fontWeight = '700';
+        el.style.borderBottom = '2px solid #f2ca50';
+        el.style.paddingBottom = '4px';
+      } else {
+        el.style.color = '';
+        el.style.fontWeight = '';
+        el.style.borderBottom = '';
+        el.style.paddingBottom = '';
+      }
+    });
+  }
+
+  setActive('inicio');
+
+  const sectionIds = ['inicio', 'servicos', 'equipe', 'agendar'];
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) setActive(entry.target.id);
+    });
+  }, { rootMargin: '-40% 0px -55% 0px' });
+
+  sectionIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) observer.observe(el);
+  });
+})();
 </script>
 
 <!-- HERO -->
