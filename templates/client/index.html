@@ -41,7 +41,11 @@
       <a href="#equipe" onclick="toggleMobileMenu()" class="text-on-surface-variant font-body text-[14px] uppercase tracking-widest hover:text-primary transition-colors py-3 border-b border-outline-variant/10">Profissionais</a>
       <a href="#agendar" onclick="toggleMobileMenu()" class="text-on-surface-variant font-body text-[14px] uppercase tracking-widest hover:text-primary transition-colors py-3 border-b border-outline-variant/10">Agendar</a>
       {% if session.user_id %}
-        {% if not session.is_admin %}
+        {% if session.is_admin %}
+          <a href="{{ url_for('admin_dashboard') }}" class="text-primary font-body text-[14px] uppercase tracking-widest font-bold py-3 border-b border-outline-variant/10 flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px]">dashboard</span> Painel Admin
+          </a>
+        {% else %}
           <a href="{{ url_for('meus_agendamentos') }}" class="text-primary font-body text-[14px] uppercase tracking-widest py-3 border-b border-outline-variant/10">Meus Agendamentos</a>
         {% endif %}
       {% else %}
