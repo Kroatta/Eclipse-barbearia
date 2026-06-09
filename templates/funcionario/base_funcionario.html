@@ -1,10 +1,19 @@
 {% extends "base.html" %}
 {% block body %}
 <div class="flex min-h-screen bg-background">
-  <aside class="fixed left-0 top-0 h-full flex flex-col bg-surface-container-low w-64 border-r border-outline-variant z-50">
-    <div class="p-8">
-      <h1 class="font-display text-[24px] font-bold text-primary tracking-widest uppercase">ECLIPSE</h1>
-      <p class="font-body text-[14px] text-on-surface-variant opacity-70 mt-1">Área do Profissional</p>
+
+  <!-- OVERLAY MOBILE -->
+  <div id="sidebar-overlay" onclick="toggleSidebar()" class="hidden fixed inset-0 bg-black/60 z-40 md:hidden"></div>
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar" class="fixed left-0 top-0 h-full flex flex-col bg-surface-container-low w-64 border-r border-outline-variant z-50
+    -translate-x-full md:translate-x-0 transition-transform duration-300">
+    <div class="p-6 flex items-center justify-between">
+      <div>
+        <h1 class="font-display text-[22px] font-bold text-primary tracking-widest uppercase">ECLIPSE</h1>
+        <p class="font-body text-[12px] text-on-surface-variant opacity-70 mt-0.5">Área do Profissional</p>
+      </div>
+      <button onclick="toggleSidebar()" class="md:hidden material-symbols-outlined text-on-surface-variant hover:text-primary text-[24px]">close</button>
     </div>
     <nav class="flex-1 px-4 space-y-1">
       <a href="{{ url_for('funcionario_agenda') }}"
@@ -31,14 +40,26 @@
       </a>
     </div>
   </aside>
-  <div class="ml-64 flex-1 flex flex-col">
-    <header class="flex justify-between items-center h-16 w-full px-8 bg-surface-container border-b border-outline-variant fixed top-0 left-64 right-0 z-40">
-      <h2 class="font-display text-[20px] font-bold text-primary">{% block func_title %}Profissional{% endblock %}</h2>
+
+  <div class="md:ml-64 flex-1 flex flex-col min-w-0">
+    <header class="flex justify-between items-center h-16 w-full px-4 md:px-8 bg-surface-container border-b border-outline-variant fixed top-0 left-0 md:left-64 right-0 z-40">
+      <div class="flex items-center gap-3">
+        <button onclick="toggleSidebar()" class="md:hidden material-symbols-outlined text-on-surface-variant hover:text-primary text-[26px]">menu</button>
+        <h2 class="font-display text-[18px] md:text-[20px] font-bold text-primary">{% block func_title %}Profissional{% endblock %}</h2>
+      </div>
     </header>
-    <main class="mt-16 flex-1 p-8">
+    <main class="mt-16 flex-1 p-4 md:p-8 overflow-x-hidden">
       {% block func_content %}{% endblock %}
     </main>
   </div>
 </div>
+<script>
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  sidebar.classList.toggle('-translate-x-full');
+  overlay.classList.toggle('hidden');
+}
+</script>
 {% endblock %}
 {% block scripts %}{% block func_scripts %}{% endblock %}{% endblock %}
