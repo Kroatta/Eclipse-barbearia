@@ -147,6 +147,18 @@ def init_db():
             FOREIGN KEY(agendamento_id) REFERENCES agendamentos(id),
             FOREIGN KEY(servico_id) REFERENCES servicos(id)
         );
+
+        CREATE TABLE IF NOT EXISTS agendamento_produtos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agendamento_id INTEGER NOT NULL,
+            produto_id INTEGER NOT NULL,
+            usuario_id INTEGER,
+            quantidade INTEGER DEFAULT 1,
+            observacao TEXT,
+            criado_em TEXT DEFAULT (datetime('now','localtime')),
+            FOREIGN KEY(agendamento_id) REFERENCES agendamentos(id),
+            FOREIGN KEY(produto_id) REFERENCES produtos(id)
+        );
     ''')
 
     # Migrações para bancos existentes (garante colunas novas em DBs antigos)
@@ -582,11 +594,10 @@ def funcionario_agenda():
             WHERE a.barbeiro_id = ?
             ORDER BY a.data_hora DESC
         """, (barbeiro['id'],)).fetchall()
-    all_produtos = db.execute("SELECT * FROM produtos WHERE ativo=1 AND quantidade>0 ORDER BY nome").fetchall()
+    all_produtos = db.execute("SELECT * FROM produtos WHERE ativo=1 ORDER BY nome").fetchall()
     produtos_ag_rows = db.execute("""
-        SELECT up.*, p.nome as produto_nome, p.unidade
-        FROM uso_produtos up JOIN produtos p ON up.produto_id = p.id
-        WHERE up.agendamento_id IS NOT NULL
+        SELECT ap.*, p.nome as produto_nome, p.unidade
+        FROM agendamento_produtos ap JOIN produtos p ON ap.produto_id = p.id
     """).fetchall()
     produtos_ag_map = {}
     for p in produtos_ag_rows:
@@ -887,10 +898,9 @@ def admin_agendamentos():
     for e in extras_rows:
         extras_map.setdefault(e['agendamento_id'], []).append(dict(e))
     produtos_ag_rows = db.execute("""
-        SELECT up.*, p.nome as produto_nome, p.unidade
-        FROM uso_produtos up
-        JOIN produtos p ON up.produto_id = p.id
-        WHERE up.agendamento_id IS NOT NULL
+        SELECT ap.*, p.nome as produto_nome, p.unidade
+        FROM agendamento_produtos ap
+        JOIN produtos p ON ap.produto_id = p.id
     """).fetchall()
     produtos_ag_map = {}
     for p in produtos_ag_rows:
@@ -1518,13 +1528,12 @@ def admin_agendamento_produto_add(ag_id):
         return redirect(url_for('admin_agendamentos'))
     db = get_db()
     produto = db.execute("SELECT * FROM produtos WHERE id=? AND ativo=1", (produto_id,)).fetchone()
-    if not produto or produto['quantidade'] < quantidade:
+    if not produto:
         db.close()
-        flash('Produto indisponível ou estoque insuficiente.', 'error')
+        flash('Produto não encontrado.', 'error')
         return redirect(url_for('admin_agendamentos'))
-    db.execute("UPDATE produtos SET quantidade = quantidade - ? WHERE id=?", (quantidade, produto_id))
-    db.execute("INSERT INTO uso_produtos (produto_id, usuario_id, quantidade, observacao, agendamento_id) VALUES (?,?,?,?,?)",
-               (produto_id, session['user_id'], quantidade, observacao, ag_id))
+    db.execute("INSERT INTO agendamento_produtos (agendamento_id, produto_id, usuario_id, quantidade, observacao) VALUES (?,?,?,?,?)",
+               (ag_id, produto_id, session['user_id'], quantidade, observacao))
     db.commit()
     db.close()
     flash('Produto registrado no agendamento.', 'success')
@@ -1545,8 +1554,8 @@ def funcionario_agendamento_produto_add(ag_id):
         db.close()
         flash('Produto não encontrado.', 'error')
         return redirect(url_for('funcionario_agenda'))
-    db.execute("INSERT INTO uso_produtos (produto_id, usuario_id, quantidade, observacao, agendamento_id) VALUES (?,?,?,?,?)",
-               (produto_id, session['user_id'], quantidade, observacao, ag_id))
+    db.execute("INSERT INTO agendamento_produtos (agendamento_id, produto_id, usuario_id, quantidade, observacao) VALUES (?,?,?,?,?)",
+               (ag_id, produto_id, session['user_id'], quantidade, observacao))
     db.commit()
     db.close()
     flash('Produto registrado no agendamento.', 'success')
