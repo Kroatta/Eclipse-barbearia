@@ -1,0 +1,129 @@
+{% extends "funcionario/base_funcionario.html" %}
+{% block func_title %}Minha Agenda{% endblock %}
+{% block func_content %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+  <div class="mb-4 px-4 py-3 border font-body text-[13px]
+    {% if cat == 'error' %}border-error/40 text-error bg-error/10{% else %}border-green-500/30 text-green-400 bg-green-500/10{% endif %}">
+    {{ msg }}
+  </div>
+  {% endfor %}
+{% endwith %}
+
+<div class="mb-6">
+  <span class="text-primary font-body text-[12px] uppercase tracking-[0.3em] block mb-2">Profissional</span>
+  <h1 class="font-display text-[28px] md:text-[32px] text-on-background font-semibold">Minha Agenda</h1>
+  {% if barbeiro %}
+  <p class="text-on-surface-variant font-body mt-1">{{ barbeiro.nome }}</p>
+  {% endif %}
+</div>
+
+{% if not barbeiro %}
+<div class="bg-surface-container-low border border-outline-variant/20 p-12 text-center">
+  <span class="material-symbols-outlined text-primary/20 text-[80px]">link_off</span>
+  <h3 class="font-display text-[24px] text-on-surface-variant mt-4 mb-2">Conta não vinculada</h3>
+  <p class="text-on-surface-variant font-body">Peça ao administrador para vincular sua conta a um barbeiro.</p>
+</div>
+{% else %}
+
+<!-- Navegação de Data -->
+<div class="flex items-center gap-2 mb-6 flex-wrap">
+  <a href="{{ url_for('funcionario_minha_agenda', data=data_anterior) }}"
+     class="bg-surface-container border border-outline-variant/20 p-2 hover:border-primary/50 transition-colors flex items-center">
+    <span class="material-symbols-outlined text-on-surface-variant text-[22px]">chevron_left</span>
+  </a>
+  <form method="GET" class="flex">
+    <input type="date" name="data" value="{{ data }}" onchange="this.form.submit()"
+           class="bg-surface-container border border-outline-variant/30 text-on-surface py-2 px-3 font-body text-[14px] focus:border-primary focus:ring-0"/>
+  </form>
+  <a href="{{ url_for('funcionario_minha_agenda', data=data_proxima) }}"
+     class="bg-surface-container border border-outline-variant/20 p-2 hover:border-primary/50 transition-colors flex items-center">
+    <span class="material-symbols-outlined text-on-surface-variant text-[22px]">chevron_right</span>
+  </a>
+  <a href="{{ url_for('funcionario_minha_agenda') }}"
+     class="border border-primary/30 text-primary px-4 py-2 font-body text-[13px] uppercase tracking-widest hover:bg-primary/10 transition-colors">
+    Hoje
+  </a>
+  <!-- Legenda -->
+  <div class="flex gap-3 ml-auto flex-wrap">
+    <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-green-500"></div><span class="font-body text-[11px] text-on-surface-variant uppercase tracking-widest">Disponível</span></div>
+    <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-primary"></div><span class="font-body text-[11px] text-on-surface-variant uppercase tracking-widest">Agendado</span></div>
+    <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-error"></div><span class="font-body text-[11px] text-on-surface-variant uppercase tracking-widest">Bloqueado</span></div>
+    <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-outline-variant"></div><span class="font-body text-[11px] text-on-surface-variant uppercase tracking-widest">Almoço</span></div>
+  </div>
+</div>
+
+<!-- Lista de Horários -->
+<div class="space-y-1.5">
+  {% for slot in slots %}
+  <div class="flex items-center gap-4 px-4 py-3 border transition-all
+    {% if slot.tipo == 'almoco' %}bg-surface-container border-outline-variant/10 opacity-50
+    {% elif slot.tipo == 'agendado' %}bg-primary/5 border-primary/25
+    {% elif slot.tipo == 'bloqueado' %}bg-error/5 border-error/25
+    {% else %}bg-surface-container-low border-outline-variant/10 hover:border-outline-variant/30{% endif %}">
+
+    <!-- Hora -->
+    <div class="w-14 shrink-0">
+      <span class="font-body text-[14px] font-bold
+        {% if slot.tipo == 'agendado' %}text-primary
+        {% elif slot.tipo == 'bloqueado' %}text-error
+        {% elif slot.tipo == 'almoco' %}text-on-surface-variant
+        {% else %}text-on-surface{% endif %}">{{ slot.hora }}</span>
+    </div>
+
+    <!-- Indicador -->
+    <div class="w-2 h-2 rounded-full shrink-0
+      {% if slot.tipo == 'agendado' %}bg-primary
+      {% elif slot.tipo == 'bloqueado' %}bg-error
+      {% elif slot.tipo == 'almoco' %}bg-outline-variant
+      {% else %}bg-green-500{% endif %}">
+    </div>
+
+    <!-- Conteúdo -->
+    <div class="flex-1 min-w-0">
+      {% if slot.tipo == 'agendado' %}
+        <p class="font-body text-[14px] text-on-background font-semibold">{{ slot.cliente }}</p>
+        <p class="font-body text-[12px] text-on-surface-variant">{{ slot.servico }}</p>
+      {% elif slot.tipo == 'bloqueado' %}
+        <p class="font-body text-[13px] text-error">Horário bloqueado por você</p>
+      {% elif slot.tipo == 'almoco' %}
+        <p class="font-body text-[13px] text-on-surface-variant">Intervalo de Almoço — fixo</p>
+      {% else %}
+        <p class="font-body text-[13px] text-on-surface-variant">Disponível</p>
+      {% endif %}
+    </div>
+
+    <!-- Ação -->
+    {% if slot.tipo == 'disponivel' %}
+    <form method="POST" action="{{ url_for('funcionario_bloquear_horario') }}" class="shrink-0">
+      <input type="hidden" name="data" value="{{ data }}">
+      <input type="hidden" name="hora" value="{{ slot.hora }}">
+      <button type="submit" class="border border-error/40 text-error hover:bg-error/10 px-3 py-1 font-body text-[11px] uppercase tracking-widest transition-colors">
+        Bloquear
+      </button>
+    </form>
+    {% elif slot.tipo == 'bloqueado' %}
+    <form method="POST" action="{{ url_for('funcionario_bloquear_horario') }}" class="shrink-0">
+      <input type="hidden" name="data" value="{{ data }}">
+      <input type="hidden" name="hora" value="{{ slot.hora }}">
+      <button type="submit" class="border border-green-500/40 text-green-400 hover:bg-green-500/10 px-3 py-1 font-body text-[11px] uppercase tracking-widest transition-colors">
+        Desbloquear
+      </button>
+    </form>
+    {% elif slot.tipo == 'almoco' %}
+    <span class="font-body text-[11px] text-on-surface-variant uppercase tracking-widest shrink-0">Fixo</span>
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  {% if not slots %}
+  <div class="text-center py-16 text-on-surface-variant">
+    <span class="material-symbols-outlined text-[64px] opacity-20">calendar_today</span>
+    <p class="font-body mt-4">Conta não vinculada a um barbeiro.</p>
+  </div>
+  {% endif %}
+</div>
+
+{% endif %}
+{% endblock %}

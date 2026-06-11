@@ -126,6 +126,27 @@ def init_db():
             chave TEXT PRIMARY KEY,
             valor TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS horarios_bloqueados (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            barbeiro_id INTEGER NOT NULL,
+            data TEXT NOT NULL,
+            hora TEXT NOT NULL,
+            criado_em TEXT DEFAULT (datetime('now','localtime')),
+            FOREIGN KEY(barbeiro_id) REFERENCES barbeiros(id),
+            UNIQUE(barbeiro_id, data, hora)
+        );
+
+        CREATE TABLE IF NOT EXISTS agendamento_extras (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agendamento_id INTEGER NOT NULL,
+            servico_id INTEGER,
+            descricao TEXT,
+            valor REAL NOT NULL DEFAULT 0,
+            criado_em TEXT DEFAULT (datetime('now','localtime')),
+            FOREIGN KEY(agendamento_id) REFERENCES agendamentos(id),
+            FOREIGN KEY(servico_id) REFERENCES servicos(id)
+        );
     ''')
 
     # Migrações para bancos existentes (garante colunas novas em DBs antigos)
@@ -133,6 +154,7 @@ def init_db():
         "ALTER TABLE usuarios ADD COLUMN is_funcionario INTEGER DEFAULT 0",
         "ALTER TABLE barbeiros ADD COLUMN usuario_id INTEGER",
         "ALTER TABLE agendamentos ADD COLUMN nome_avulso TEXT",
+        "ALTER TABLE uso_produtos ADD COLUMN agendamento_id INTEGER",
     ]:
         try:
             c.execute(sql)
@@ -432,6 +454,23 @@ def agendar():
             db.close()
             return render_template('client/agendar.html', servicos=servicos, barbeiros=barbeiros)
         novo_fim = data_hora_dt + timedelta(minutes=servico['duracao'])
+        lunch_s = datetime.strptime(f"{data} 12:00", '%Y-%m-%d %H:%M')
+        lunch_e = datetime.strptime(f"{data} 13:00", '%Y-%m-%d %H:%M')
+        if data_hora_dt < lunch_e and novo_fim > lunch_s:
+            flash('Não é possível agendar no horário de almoço (12:00 — 13:00).', 'error')
+            db.close()
+            return render_template('client/agendar.html', servicos=servicos, barbeiros=barbeiros)
+        bloqueados = db.execute(
+            "SELECT hora FROM horarios_bloqueados WHERE barbeiro_id=? AND data=?",
+            (barbeiro_id, data)
+        ).fetchall()
+        for b in bloqueados:
+            b_start = datetime.strptime(f"{data} {b['hora']}", '%Y-%m-%d %H:%M')
+            b_end = b_start + timedelta(minutes=30)
+            if data_hora_dt < b_end and novo_fim > b_start:
+                flash(f'O horário das {b["hora"]} está bloqueado pelo profissional.', 'error')
+                db.close()
+                return render_template('client/agendar.html', servicos=servicos, barbeiros=barbeiros)
         conflitos = db.execute("""
             SELECT a.data_hora, s.duracao
             FROM agendamentos a JOIN servicos s ON a.servico_id=s.id
@@ -543,9 +582,19 @@ def funcionario_agenda():
             WHERE a.barbeiro_id = ?
             ORDER BY a.data_hora DESC
         """, (barbeiro['id'],)).fetchall()
+    all_produtos = db.execute("SELECT * FROM produtos WHERE ativo=1 AND quantidade>0 ORDER BY nome").fetchall()
+    produtos_ag_rows = db.execute("""
+        SELECT up.*, p.nome as produto_nome, p.unidade
+        FROM uso_produtos up JOIN produtos p ON up.produto_id = p.id
+        WHERE up.agendamento_id IS NOT NULL
+    """).fetchall()
+    produtos_ag_map = {}
+    for p in produtos_ag_rows:
+        produtos_ag_map.setdefault(p['agendamento_id'], []).append(dict(p))
     db.close()
     agora = datetime.now().strftime('%Y-%m-%d %H:%M')
-    return render_template('funcionario/agenda.html', agendamentos=agendamentos, barbeiro=barbeiro, agora=agora)
+    return render_template('funcionario/agenda.html', agendamentos=agendamentos, barbeiro=barbeiro,
+                           agora=agora, all_produtos=all_produtos, produtos_ag_map=produtos_ag_map)
 
 @app.route('/funcionario/estoque')
 @funcionario_required
@@ -827,10 +876,31 @@ def admin_agendamentos():
         ORDER BY a.data_hora DESC
     """, params).fetchall()
     barbeiros = db.execute("SELECT * FROM barbeiros WHERE ativo=1 ORDER BY nome").fetchall()
+    all_servicos = db.execute("SELECT * FROM servicos WHERE ativo=1 ORDER BY nome").fetchall()
+    all_produtos = db.execute("SELECT * FROM produtos WHERE ativo=1 AND quantidade>0 ORDER BY nome").fetchall()
+    extras_rows = db.execute("""
+        SELECT ae.*, s.nome as nome_servico
+        FROM agendamento_extras ae
+        LEFT JOIN servicos s ON ae.servico_id = s.id
+    """).fetchall()
+    extras_map = {}
+    for e in extras_rows:
+        extras_map.setdefault(e['agendamento_id'], []).append(dict(e))
+    produtos_ag_rows = db.execute("""
+        SELECT up.*, p.nome as produto_nome, p.unidade
+        FROM uso_produtos up
+        JOIN produtos p ON up.produto_id = p.id
+        WHERE up.agendamento_id IS NOT NULL
+    """).fetchall()
+    produtos_ag_map = {}
+    for p in produtos_ag_rows:
+        produtos_ag_map.setdefault(p['agendamento_id'], []).append(dict(p))
     db.close()
     return render_template('admin/agendamentos.html', agendamentos=agendamentos,
                            barbeiros=barbeiros, status_f=status_f, barbeiro_f=barbeiro_f,
-                           data_de=data_de, data_ate=data_ate)
+                           data_de=data_de, data_ate=data_ate,
+                           all_servicos=all_servicos, all_produtos=all_produtos,
+                           extras_map=extras_map, produtos_ag_map=produtos_ag_map)
 
 @app.route('/admin/estoque')
 @admin_required
@@ -1021,6 +1091,31 @@ def admin_agendamento_novo():
         flash('Preencha todos os campos obrigatorios.', 'error')
         return redirect(url_for('admin_calendario'))
     db = get_db()
+    try:
+        dh_dt = datetime.strptime(data_hora, '%Y-%m-%dT%H:%M')
+    except ValueError:
+        dh_dt = datetime.strptime(data_hora, '%Y-%m-%d %H:%M')
+    data_only = dh_dt.strftime('%Y-%m-%d')
+    srv = db.execute("SELECT duracao FROM servicos WHERE id=?", (servico_id,)).fetchone()
+    if srv:
+        dh_fim = dh_dt + timedelta(minutes=srv['duracao'])
+        lunch_s = datetime.strptime(f"{data_only} 12:00", '%Y-%m-%d %H:%M')
+        lunch_e = datetime.strptime(f"{data_only} 13:00", '%Y-%m-%d %H:%M')
+        if dh_dt < lunch_e and dh_fim > lunch_s:
+            db.close()
+            flash('Não é possível agendar no horário de almoço (12:00 — 13:00).', 'error')
+            return redirect(url_for('admin_calendario'))
+        bloqueados = db.execute(
+            "SELECT hora FROM horarios_bloqueados WHERE barbeiro_id=? AND data=?",
+            (barbeiro_id, data_only)
+        ).fetchall()
+        for b in bloqueados:
+            b_start = datetime.strptime(f"{data_only} {b['hora']}", '%Y-%m-%d %H:%M')
+            b_end = b_start + timedelta(minutes=30)
+            if dh_dt < b_end and dh_fim > b_start:
+                db.close()
+                flash(f'O horário das {b["hora"]} está bloqueado pelo profissional.', 'error')
+                return redirect(url_for('admin_calendario'))
     db.execute("""
         INSERT INTO agendamentos (usuario_id, barbeiro_id, servico_id, data_hora, observacoes, nome_avulso)
         VALUES (?,?,?,?,?,?)
@@ -1225,19 +1320,32 @@ def api_horarios_disponiveis():
         FROM agendamentos a JOIN servicos s ON a.servico_id=s.id
         WHERE a.barbeiro_id=? AND date(a.data_hora)=? AND a.status!='cancelado'
     """, (barbeiro_id, data)).fetchall()
+    bloqueados = db.execute(
+        "SELECT hora FROM horarios_bloqueados WHERE barbeiro_id=? AND data=?",
+        (barbeiro_id, data)
+    ).fetchall()
     db.close()
+    bloqueados_set = {r['hora'] for r in bloqueados}
     busy = []
     for ag in ocupados:
         s = datetime.strptime(ag['data_hora'], '%Y-%m-%d %H:%M')
         busy.append((s, s + timedelta(minutes=ag['duracao'])))
+    lunch_s = datetime.strptime(f"{data} 12:00", '%Y-%m-%d %H:%M')
+    lunch_e = datetime.strptime(f"{data} 13:00", '%Y-%m-%d %H:%M')
     slots = []
     base = datetime.strptime(f"{data} 08:00", '%Y-%m-%d %H:%M')
     fim_dia = datetime.strptime(f"{data} 20:00", '%Y-%m-%d %H:%M')
     cur = base
     while cur + timedelta(minutes=dur_nova) <= fim_dia + timedelta(minutes=1):
         slot_fim = cur + timedelta(minutes=dur_nova)
-        disponivel = all(not (cur < b_end and slot_fim > b_start) for b_start, b_end in busy)
-        slots.append({'hora': cur.strftime('%H:%M'), 'disponivel': disponivel})
+        hora_str = cur.strftime('%H:%M')
+        if cur < lunch_e and slot_fim > lunch_s:
+            slots.append({'hora': hora_str, 'disponivel': False})
+        elif hora_str in bloqueados_set:
+            slots.append({'hora': hora_str, 'disponivel': False})
+        else:
+            disponivel = all(not (cur < b_end and slot_fim > b_start) for b_start, b_end in busy)
+            slots.append({'hora': hora_str, 'disponivel': disponivel})
         cur += timedelta(minutes=30)
     return jsonify(slots)
 
@@ -1272,6 +1380,178 @@ def api_produtos_barbeiros():
     """).fetchall()
     db.close()
     return jsonify([dict(r) for r in dados])
+
+# ─── MINHA AGENDA (FUNCIONÁRIO) ──────────────────────────────────────────────
+
+@app.route('/funcionario/minha-agenda')
+@funcionario_required
+def funcionario_minha_agenda():
+    from datetime import date as _date
+    data = request.args.get('data', _date.today().isoformat())
+    db = get_db()
+    barbeiro = db.execute("SELECT * FROM barbeiros WHERE usuario_id=? AND ativo=1", (session['user_id'],)).fetchone()
+    slots = []
+    if barbeiro:
+        agendamentos_dia = db.execute("""
+            SELECT a.*, s.nome as servico_nome, s.duracao,
+                   COALESCE(a.nome_avulso, u.nome) as usuario_nome
+            FROM agendamentos a
+            JOIN servicos s ON a.servico_id = s.id
+            LEFT JOIN usuarios u ON a.usuario_id = u.id
+            WHERE a.barbeiro_id=? AND date(a.data_hora)=? AND a.status!='cancelado'
+        """, (barbeiro['id'], data)).fetchall()
+        bloqueados = db.execute(
+            "SELECT hora FROM horarios_bloqueados WHERE barbeiro_id=? AND data=?",
+            (barbeiro['id'], data)
+        ).fetchall()
+        bloqueados_set = {r['hora'] for r in bloqueados}
+        cur = datetime.strptime(f"{data} 08:00", '%Y-%m-%d %H:%M')
+        fim = datetime.strptime(f"{data} 20:00", '%Y-%m-%d %H:%M')
+        while cur < fim:
+            hora_str = cur.strftime('%H:%M')
+            hora_fim_str = (cur + timedelta(minutes=30)).strftime('%H:%M')
+            if '12:00' <= hora_str < '13:00':
+                slots.append({'hora': hora_str, 'tipo': 'almoco'})
+                cur += timedelta(minutes=30)
+                continue
+            ag_slot = None
+            for ag in agendamentos_dia:
+                ag_ini = ag['data_hora'][11:16]
+                ag_fim = (datetime.strptime(ag_ini, '%H:%M') + timedelta(minutes=ag['duracao'])).strftime('%H:%M')
+                if ag_ini <= hora_str < ag_fim:
+                    ag_slot = ag
+                    break
+            if ag_slot:
+                slots.append({'hora': hora_str, 'tipo': 'agendado',
+                              'cliente': ag_slot['usuario_nome'].split()[0],
+                              'servico': ag_slot['servico_nome'], 'ag_id': ag_slot['id']})
+            elif hora_str in bloqueados_set:
+                slots.append({'hora': hora_str, 'tipo': 'bloqueado'})
+            else:
+                slots.append({'hora': hora_str, 'tipo': 'disponivel'})
+            cur += timedelta(minutes=30)
+    db.close()
+    from datetime import date as _d, timedelta as _td
+    dt = _d.fromisoformat(data)
+    return render_template('funcionario/minha_agenda.html', barbeiro=barbeiro, slots=slots,
+                           data=data,
+                           data_anterior=(dt - _td(days=1)).isoformat(),
+                           data_proxima=(dt + _td(days=1)).isoformat())
+
+@app.route('/funcionario/bloquear-horario', methods=['POST'])
+@funcionario_required
+def funcionario_bloquear_horario():
+    data = request.form.get('data', '')
+    hora = request.form.get('hora', '')
+    db = get_db()
+    barbeiro = db.execute("SELECT * FROM barbeiros WHERE usuario_id=? AND ativo=1", (session['user_id'],)).fetchone()
+    if not barbeiro:
+        db.close()
+        flash('Conta não vinculada a um barbeiro.', 'error')
+        return redirect(url_for('funcionario_minha_agenda', data=data))
+    existente = db.execute(
+        "SELECT id FROM horarios_bloqueados WHERE barbeiro_id=? AND data=? AND hora=?",
+        (barbeiro['id'], data, hora)
+    ).fetchone()
+    if existente:
+        db.execute("DELETE FROM horarios_bloqueados WHERE id=?", (existente['id'],))
+        flash(f'Horário {hora} desbloqueado.', 'success')
+    else:
+        agendado = db.execute("""
+            SELECT a.id FROM agendamentos a JOIN servicos s ON a.servico_id=s.id
+            WHERE a.barbeiro_id=? AND date(a.data_hora)=? AND a.status!='cancelado'
+            AND time(a.data_hora) <= ? AND time(datetime(a.data_hora,'+'||s.duracao||' minutes')) > ?
+        """, (barbeiro['id'], data, hora, hora)).fetchone()
+        if agendado:
+            db.close()
+            flash('Não é possível bloquear um horário que já possui agendamento.', 'error')
+            return redirect(url_for('funcionario_minha_agenda', data=data))
+        db.execute("INSERT OR IGNORE INTO horarios_bloqueados (barbeiro_id, data, hora) VALUES (?,?,?)",
+                   (barbeiro['id'], data, hora))
+        flash(f'Horário {hora} bloqueado.', 'success')
+    db.commit()
+    db.close()
+    return redirect(url_for('funcionario_minha_agenda', data=data))
+
+# ─── EXTRAS E PRODUTOS PÓS-CONCLUSÃO ─────────────────────────────────────────
+
+@app.route('/admin/agendamento/<int:ag_id>/extra', methods=['POST'])
+@admin_required
+def admin_agendamento_extra_add(ag_id):
+    servico_id = request.form.get('servico_id', type=int)
+    descricao = request.form.get('descricao', '').strip()
+    valor = request.form.get('valor', 0, type=float)
+    if not servico_id or valor <= 0:
+        flash('Selecione um serviço válido.', 'error')
+        return redirect(url_for('admin_agendamentos'))
+    db = get_db()
+    db.execute("INSERT INTO agendamento_extras (agendamento_id, servico_id, descricao, valor) VALUES (?,?,?,?)",
+               (ag_id, servico_id, descricao, valor))
+    if descricao:
+        ag = db.execute("SELECT observacoes FROM agendamentos WHERE id=?", (ag_id,)).fetchone()
+        obs = (ag['observacoes'] or '').strip()
+        nova_obs = obs + ('\n' if obs else '') + f'[Adm] {descricao}'
+        db.execute("UPDATE agendamentos SET observacoes=? WHERE id=?", (nova_obs, ag_id))
+    db.commit()
+    db.close()
+    flash('Serviço extra adicionado ao agendamento.', 'success')
+    return redirect(url_for('admin_agendamentos'))
+
+@app.route('/admin/agendamento/extra/excluir/<int:extra_id>')
+@admin_required
+def admin_agendamento_extra_excluir(extra_id):
+    db = get_db()
+    db.execute("DELETE FROM agendamento_extras WHERE id=?", (extra_id,))
+    db.commit()
+    db.close()
+    flash('Extra removido.', 'success')
+    return redirect(url_for('admin_agendamentos'))
+
+@app.route('/admin/agendamento/<int:ag_id>/produto', methods=['POST'])
+@admin_required
+def admin_agendamento_produto_add(ag_id):
+    produto_id = request.form.get('produto_id', type=int)
+    quantidade = request.form.get('quantidade', 1, type=int)
+    observacao = request.form.get('observacao', '').strip()
+    if not produto_id or quantidade < 1:
+        flash('Dados inválidos.', 'error')
+        return redirect(url_for('admin_agendamentos'))
+    db = get_db()
+    produto = db.execute("SELECT * FROM produtos WHERE id=? AND ativo=1", (produto_id,)).fetchone()
+    if not produto or produto['quantidade'] < quantidade:
+        db.close()
+        flash('Produto indisponível ou estoque insuficiente.', 'error')
+        return redirect(url_for('admin_agendamentos'))
+    db.execute("UPDATE produtos SET quantidade = quantidade - ? WHERE id=?", (quantidade, produto_id))
+    db.execute("INSERT INTO uso_produtos (produto_id, usuario_id, quantidade, observacao, agendamento_id) VALUES (?,?,?,?,?)",
+               (produto_id, session['user_id'], quantidade, observacao, ag_id))
+    db.commit()
+    db.close()
+    flash('Produto registrado no agendamento.', 'success')
+    return redirect(url_for('admin_agendamentos'))
+
+@app.route('/funcionario/agendamento/<int:ag_id>/produto', methods=['POST'])
+@funcionario_required
+def funcionario_agendamento_produto_add(ag_id):
+    produto_id = request.form.get('produto_id', type=int)
+    quantidade = request.form.get('quantidade', 1, type=int)
+    observacao = request.form.get('observacao', '').strip()
+    if not produto_id or quantidade < 1:
+        flash('Dados inválidos.', 'error')
+        return redirect(url_for('funcionario_agenda'))
+    db = get_db()
+    produto = db.execute("SELECT * FROM produtos WHERE id=? AND ativo=1", (produto_id,)).fetchone()
+    if not produto or produto['quantidade'] < quantidade:
+        db.close()
+        flash('Produto indisponível ou estoque insuficiente.', 'error')
+        return redirect(url_for('funcionario_agenda'))
+    db.execute("UPDATE produtos SET quantidade = quantidade - ? WHERE id=?", (quantidade, produto_id))
+    db.execute("INSERT INTO uso_produtos (produto_id, usuario_id, quantidade, observacao, agendamento_id) VALUES (?,?,?,?,?)",
+               (produto_id, session['user_id'], quantidade, observacao, ag_id))
+    db.commit()
+    db.close()
+    flash('Produto registrado no agendamento.', 'success')
+    return redirect(url_for('funcionario_agenda'))
 
 # ─── MAIN ─────────────────────────────────────────────────────────────────────
 

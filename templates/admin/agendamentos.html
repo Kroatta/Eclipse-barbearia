@@ -79,13 +79,28 @@
           <td class="px-6 py-4">
             <p class="font-body text-[14px] text-on-background">{{ a.servico_nome }}</p>
             <p class="font-body text-[12px] text-on-surface-variant">{{ a.duracao }} min</p>
+            {% for e in extras_map.get(a.id, []) %}
+            <div class="flex items-center gap-1 mt-1">
+              <span class="material-symbols-outlined text-primary text-[13px]">add_circle</span>
+              <span class="font-body text-[11px] text-primary">{{ e.nome_servico or 'Extra' }} — R$ {{ "%.0f"|format(e.valor) }}</span>
+              <a href="{{ url_for('admin_agendamento_extra_excluir', extra_id=e.id) }}"
+                 onclick="return confirm('Remover este extra?')"
+                 class="material-symbols-outlined text-error/60 hover:text-error text-[13px] ml-1">cancel</a>
+            </div>
+            {% endfor %}
           </td>
           <td class="px-6 py-4 font-body text-[14px] text-on-surface-variant">{{ a.barbeiro_nome.split()[0] }}</td>
           <td class="px-6 py-4">
             <p class="font-body text-[14px] text-on-background">{{ a.data_hora[:10] }}</p>
             <p class="font-body text-[12px] text-on-surface-variant">{{ a.data_hora[11:16] }}</p>
           </td>
-          <td class="px-6 py-4 text-right font-body text-[16px] text-primary font-bold">R$ {{ "%.0f"|format(a.preco) }}</td>
+          {% set extras_total = extras_map.get(a.id, [])|sum(attribute='valor') %}
+          <td class="px-6 py-4 text-right">
+            <p class="font-body text-[16px] text-primary font-bold">R$ {{ "%.0f"|format(a.preco + extras_total) }}</p>
+            {% if extras_total > 0 %}
+            <p class="font-body text-[11px] text-on-surface-variant">base R$ {{ "%.0f"|format(a.preco) }}</p>
+            {% endif %}
+          </td>
           <td class="px-6 py-4 text-center">
             <span class="inline-block px-3 py-1 font-body text-[11px] uppercase tracking-widest font-bold
               {% if a.status == 'confirmado' %}bg-primary/10 text-primary border border-primary/30
@@ -96,7 +111,7 @@
           </td>
           <td class="px-6 py-4 text-center">
             {% if a.status == 'confirmado' %}
-            <div class="flex justify-center gap-2">
+            <div class="flex justify-center gap-1 flex-wrap">
               <form method="POST" action="{{ url_for('admin_agendamento_status', id=a.id) }}">
                 <input type="hidden" name="status" value="concluido">
                 <input type="hidden" name="origem" value="lista">
@@ -108,6 +123,25 @@
                 <input type="hidden" name="origem" value="lista">
                 <button type="submit" class="text-error border border-error/30 hover:bg-error/10 transition-colors px-2 py-1 font-body text-[11px] uppercase tracking-widest">Cancelar</button>
               </form>
+              <button onclick="abrirExtra({{ a.id }})"
+                      class="text-primary border border-primary/30 hover:bg-primary/10 transition-colors px-2 py-1 font-body text-[11px] uppercase tracking-widest flex items-center gap-0.5">
+                <span class="material-symbols-outlined text-[13px]">add</span>Extra
+              </button>
+            </div>
+            {% elif a.status == 'concluido' %}
+            <div class="flex flex-col items-center gap-1">
+              <button onclick="abrirProdutos({{ a.id }})"
+                      class="text-primary border border-primary/30 hover:bg-primary/10 transition-colors px-2 py-1 font-body text-[11px] uppercase tracking-widest flex items-center gap-1">
+                <span class="material-symbols-outlined text-[13px]">inventory_2</span>Produtos
+              </button>
+              {% set plist = produtos_ag_map.get(a.id, []) %}
+              {% if plist %}
+              <div class="mt-1 space-y-0.5">
+                {% for p in plist %}
+                <span class="block font-body text-[10px] text-on-surface-variant">{{ p.produto_nome }} ×{{ p.quantidade }}</span>
+                {% endfor %}
+              </div>
+              {% endif %}
             </div>
             {% else %}
             <span class="text-on-surface-variant font-body text-[12px]">—</span>
@@ -126,4 +160,94 @@
     <p class="font-body text-[14px] text-on-surface-variant">Receita: <span class="text-primary font-bold">R$ {{ "%.0f"|format(agendamentos|selectattr('status','ne','cancelado')|sum(attribute='preco')) }}</span></p>
   </div>
 </div>
+
+<!-- MODAL: EXTRA DE SERVIÇO -->
+<div id="modal-extra" class="hidden fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
+  <div class="bg-surface-container-low border border-outline-variant/30 w-full max-w-md p-6 shadow-2xl">
+    <div class="flex justify-between items-center mb-5">
+      <h3 class="font-display text-[20px] text-primary">Adicionar Serviço Extra</h3>
+      <button onclick="document.getElementById('modal-extra').classList.add('hidden')"
+              class="material-symbols-outlined text-on-surface-variant hover:text-error">close</button>
+    </div>
+    <form id="form-extra" method="POST" class="space-y-4">
+      <div>
+        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Serviço</label>
+        <select id="extra-servico" name="servico_id" required onchange="preencherValor(this)"
+                class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0">
+          <option value="">Selecione o serviço</option>
+          {% for s in all_servicos %}
+          <option value="{{ s.id }}" data-preco="{{ s.preco }}">{{ s.nome }} — R$ {{ "%.0f"|format(s.preco) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Valor (R$)</label>
+        <input id="extra-valor" type="number" name="valor" step="0.01" min="0.01" required
+               class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0"/>
+      </div>
+      <div>
+        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Descrição / Motivo (opcional)</label>
+        <input type="text" name="descricao" placeholder="Ex: Cliente pediu pigmentação adicional"
+               class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0 placeholder:text-outline-variant"/>
+        <p class="font-body text-[11px] text-on-surface-variant mt-1">Será adicionado à observação do agendamento.</p>
+      </div>
+      <button type="submit" class="w-full bg-primary text-on-primary py-3 font-body uppercase tracking-widest font-bold hover:bg-primary-container transition-all">
+        Adicionar Extra
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: PRODUTOS UTILIZADOS -->
+<div id="modal-produtos" class="hidden fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
+  <div class="bg-surface-container-low border border-outline-variant/30 w-full max-w-md p-6 shadow-2xl">
+    <div class="flex justify-between items-center mb-5">
+      <h3 class="font-display text-[20px] text-primary">Produtos Utilizados</h3>
+      <button onclick="document.getElementById('modal-produtos').classList.add('hidden')"
+              class="material-symbols-outlined text-on-surface-variant hover:text-error">close</button>
+    </div>
+    <form id="form-produtos" method="POST" class="space-y-4">
+      <div>
+        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Produto</label>
+        <select name="produto_id" required
+                class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0">
+          <option value="">Selecione o produto</option>
+          {% for p in all_produtos %}
+          <option value="{{ p.id }}">{{ p.nome }} ({{ p.quantidade }} {{ p.unidade }} disponível)</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Quantidade</label>
+        <input type="number" name="quantidade" min="1" value="1" required
+               class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0"/>
+      </div>
+      <div>
+        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Observação (opcional)</label>
+        <input type="text" name="observacao" placeholder="Ex: 2 aplicações de pomada"
+               class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0 placeholder:text-outline-variant"/>
+      </div>
+      <button type="submit" class="w-full bg-primary text-on-primary py-3 font-body uppercase tracking-widest font-bold hover:bg-primary-container transition-all">
+        Registrar Produto
+      </button>
+    </form>
+  </div>
+</div>
+
+<script>
+function abrirExtra(agId) {
+  document.getElementById('form-extra').action = '/admin/agendamento/' + agId + '/extra';
+  document.getElementById('extra-servico').value = '';
+  document.getElementById('extra-valor').value = '';
+  document.getElementById('modal-extra').classList.remove('hidden');
+}
+function preencherValor(sel) {
+  const opt = sel.options[sel.selectedIndex];
+  document.getElementById('extra-valor').value = opt.dataset.preco || '';
+}
+function abrirProdutos(agId) {
+  document.getElementById('form-produtos').action = '/admin/agendamento/' + agId + '/produto';
+  document.getElementById('modal-produtos').classList.remove('hidden');
+}
+</script>
 {% endblock %}

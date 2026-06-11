@@ -1,5 +1,5 @@
 {% extends "funcionario/base_funcionario.html" %}
-{% block func_title %}Minha Agenda{% endblock %}
+{% block func_title %}Agendamentos{% endblock %}
 {% block func_content %}
 
 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -13,7 +13,7 @@
 
 <div class="mb-8">
   <span class="text-primary font-body text-[12px] uppercase tracking-[0.3em] block mb-2">Profissional</span>
-  <h1 class="font-display text-[32px] text-on-background font-semibold">Minha Agenda</h1>
+  <h1 class="font-display text-[32px] text-on-background font-semibold">Agendamentos</h1>
   {% if barbeiro %}
   <p class="text-on-surface-variant font-body mt-1">Barbeiro: <span class="text-primary font-semibold">{{ barbeiro.nome }}</span></p>
   {% endif %}
@@ -81,6 +81,20 @@
           </button>
         </form>
         {% endif %}
+        {% if a.status == 'concluido' %}
+        <button onclick="abrirProdutosFunc({{ a.id }})"
+                class="border border-primary/30 text-primary hover:bg-primary/10 px-3 py-1 font-body text-[11px] uppercase tracking-widest transition-colors flex items-center gap-1">
+          <span class="material-symbols-outlined text-[13px]">inventory_2</span> Produtos
+        </button>
+        {% endif %}
+        {% set plist = produtos_ag_map.get(a.id, []) %}
+        {% if plist %}
+        <div class="mt-2 space-y-1">
+          {% for p in plist %}
+          <span class="inline-block font-body text-[10px] text-on-surface-variant border border-outline-variant/20 px-2 py-0.5">{{ p.produto_nome }} ×{{ p.quantidade }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -94,9 +108,50 @@
 {% endif %}
 {% endif %}
 
+<!-- MODAL PRODUTOS (FUNCIONÁRIO) -->
+<div id="modal-produtos-func" class="hidden fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
+  <div class="bg-surface-container-low border border-outline-variant/30 w-full max-w-md p-6 shadow-2xl">
+    <div class="flex justify-between items-center mb-5">
+      <h3 class="font-display text-[20px] text-primary">Produtos Utilizados</h3>
+      <button onclick="document.getElementById('modal-produtos-func').classList.add('hidden')"
+              class="material-symbols-outlined text-on-surface-variant hover:text-error">close</button>
+    </div>
+    <form id="form-produtos-func" method="POST" class="space-y-4">
+      <div>
+        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Produto</label>
+        <select name="produto_id" required
+                class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0">
+          <option value="">Selecione o produto</option>
+          {% for p in all_produtos %}
+          <option value="{{ p.id }}">{{ p.nome }} ({{ p.quantidade }} {{ p.unidade }} disponível)</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Quantidade</label>
+        <input type="number" name="quantidade" min="1" value="1" required
+               class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0"/>
+      </div>
+      <div>
+        <label class="block font-body text-[12px] text-on-surface-variant uppercase tracking-widest mb-2">Observação (opcional)</label>
+        <input type="text" name="observacao" placeholder="Ex: aplicado no cabelo"
+               class="w-full bg-surface-container border border-outline-variant/30 text-on-surface py-3 px-3 font-body focus:border-primary focus:ring-0 placeholder:text-outline-variant"/>
+      </div>
+      <button type="submit" class="w-full bg-primary text-on-primary py-3 font-body uppercase tracking-widest font-bold hover:bg-primary-container transition-all">
+        Registrar Produto
+      </button>
+    </form>
+  </div>
+</div>
+
 {% endblock %}
 {% block func_scripts %}
 <script>
+function abrirProdutosFunc(agId) {
+  document.getElementById('form-produtos-func').action = '/funcionario/agendamento/' + agId + '/produto';
+  document.getElementById('modal-produtos-func').classList.remove('hidden');
+}
+
 function filtrar(status) {
   document.querySelectorAll('.filter-btn').forEach(b => {
     b.classList.remove('border-primary','text-primary','bg-primary/10');
