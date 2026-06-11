@@ -1541,11 +1541,10 @@ def funcionario_agendamento_produto_add(ag_id):
         return redirect(url_for('funcionario_agenda'))
     db = get_db()
     produto = db.execute("SELECT * FROM produtos WHERE id=? AND ativo=1", (produto_id,)).fetchone()
-    if not produto or produto['quantidade'] < quantidade:
+    if not produto:
         db.close()
-        flash('Produto indisponível ou estoque insuficiente.', 'error')
+        flash('Produto não encontrado.', 'error')
         return redirect(url_for('funcionario_agenda'))
-    db.execute("UPDATE produtos SET quantidade = quantidade - ? WHERE id=?", (quantidade, produto_id))
     db.execute("INSERT INTO uso_produtos (produto_id, usuario_id, quantidade, observacao, agendamento_id) VALUES (?,?,?,?,?)",
                (produto_id, session['user_id'], quantidade, observacao, ag_id))
     db.commit()
