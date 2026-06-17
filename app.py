@@ -19,9 +19,9 @@ app.secret_key = os.environ.get('SECRET_KEY', 'eclipse_barbearia_tcc_2024_secret
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'seuemail@gmail.com'      # Troque pelo seu Gmail
-app.config['MAIL_PASSWORD'] = 'sua_senha_de_app'        # Senha de App do Google
-app.config['MAIL_DEFAULT_SENDER'] = 'seuemail@gmail.com'
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', '')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME', '')
 mail = Mail(app)
 serializer = URLSafeTimedSerializer(app.secret_key)
 
