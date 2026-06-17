@@ -22,6 +22,7 @@ app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', '')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '')
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME', '')
+app.config['MAIL_TIMEOUT'] = 5
 mail = Mail(app)
 serializer = URLSafeTimedSerializer(app.secret_key)
 
