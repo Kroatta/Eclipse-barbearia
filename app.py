@@ -352,8 +352,7 @@ def esqueci_senha():
                 '''
                 mail.send(msg)
             except Exception:
-                flash('Erro ao enviar email. Verifique as configuracoes de email no servidor.', 'error')
-                return render_template('client/esqueci_senha.html')
+                pass
         flash('Se o email estiver cadastrado, voce recebera um link de recuperacao em breve.', 'success')
         return redirect(url_for('login'))
     return render_template('client/esqueci_senha.html')
