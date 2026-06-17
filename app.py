@@ -335,25 +335,7 @@ def esqueci_senha():
         user = db.execute("SELECT * FROM usuarios WHERE email=? AND is_admin=0", (email,)).fetchone()
         db.close()
         if user:
-            token = serializer.dumps(email, salt='reset-senha')
-            reset_url = url_for('resetar_senha', token=token, _external=True)
-            try:
-                msg = Message('Recuperacao de Senha — Barbearia Eclipse', recipients=[email])
-                msg.html = f'''
-                <div style="font-family:sans-serif;max-width:480px;margin:auto;background:#131313;color:#e5e2e1;padding:40px;border:1px solid #4d4635;">
-                  <h1 style="color:#f2ca50;font-size:28px;margin-bottom:8px;">ECLIPSE</h1>
-                  <p style="color:#d0c5af;font-size:12px;text-transform:uppercase;letter-spacing:4px;margin-bottom:32px;">Barbearia Premium</p>
-                  <h2 style="font-size:20px;margin-bottom:16px;">Recuperacao de Senha</h2>
-                  <p style="color:#d0c5af;margin-bottom:24px;">Clique no botao abaixo para redefinir sua senha. O link expira em <strong style="color:#f2ca50;">1 hora</strong>.</p>
-                  <a href="{reset_url}" style="display:inline-block;background:#f2ca50;color:#131313;padding:14px 32px;text-decoration:none;font-weight:bold;text-transform:uppercase;letter-spacing:2px;margin-bottom:24px;">
-                    Redefinir Senha
-                  </a>
-                  <p style="color:#99907c;font-size:12px;">Se voce nao solicitou a recuperacao de senha, ignore este email.</p>
-                </div>
-                '''
-                mail.send(msg)
-            except Exception:
-                pass
+            pass
         flash('Se o email estiver cadastrado, voce recebera um link de recuperacao em breve.', 'success')
         return redirect(url_for('login'))
     return render_template('client/esqueci_senha.html')
